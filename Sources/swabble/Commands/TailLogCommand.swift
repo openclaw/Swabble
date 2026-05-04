@@ -1,5 +1,6 @@
 import Commander
 import Foundation
+import Swabble
 
 @MainActor
 struct TailLogCommand: ParsableCommand {

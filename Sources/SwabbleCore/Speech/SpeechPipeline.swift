@@ -2,19 +2,19 @@ import AVFoundation
 import Foundation
 import Speech
 
-struct SpeechSegment: Sendable {
-    let text: String
-    let isFinal: Bool
+public struct SpeechSegment: Sendable {
+    public let text: String
+    public let isFinal: Bool
 }
 
-enum SpeechPipelineError: Error {
+public enum SpeechPipelineError: Error {
     case authorizationDenied
     case analyzerFormatUnavailable
     case transcriberUnavailable
 }
 
 /// Live microphone → SpeechAnalyzer → SpeechTranscriber pipeline.
-actor SpeechPipeline {
+public actor SpeechPipeline {
     private struct UnsafeBuffer: @unchecked Sendable { let buffer: AVAudioPCMBuffer }
 
     private var engine = AVAudioEngine()
@@ -24,7 +24,9 @@ actor SpeechPipeline {
     private var resultTask: Task<Void, Never>?
     private let converter = BufferConverter()
 
-    func start(localeIdentifier: String, etiquette: Bool) async throws -> AsyncStream<SpeechSegment> {
+    public init() {}
+
+    public func start(localeIdentifier: String, etiquette: Bool) async throws -> AsyncStream<SpeechSegment> {
         let auth = await requestAuthorizationIfNeeded()
         guard auth == .authorized else { throw SpeechPipelineError.authorizationDenied }
 
@@ -35,15 +37,16 @@ actor SpeechPipeline {
             attributeOptions: [])
         self.transcriber = transcriberModule
 
-        guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriberModule]) else {
+        guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriberModule])
+        else {
             throw SpeechPipelineError.analyzerFormatUnavailable
         }
 
-        analyzer = SpeechAnalyzer(modules: [transcriberModule])
+        self.analyzer = SpeechAnalyzer(modules: [transcriberModule])
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
-        inputContinuation = continuation
+        self.inputContinuation = continuation
 
-        let inputNode = engine.inputNode
+        let inputNode = self.engine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
         inputNode.removeTap(onBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, _ in
@@ -52,16 +55,16 @@ actor SpeechPipeline {
             Task { await self.handleBuffer(boxed.buffer, targetFormat: analyzerFormat) }
         }
 
-        engine.prepare()
-        try engine.start()
-        try await analyzer?.start(inputSequence: stream)
+        self.engine.prepare()
+        try self.engine.start()
+        try await self.analyzer?.start(inputSequence: stream)
 
         guard let transcriberForStream = self.transcriber else {
             throw SpeechPipelineError.transcriberUnavailable
         }
 
         return AsyncStream { continuation in
-            resultTask = Task {
+            self.resultTask = Task {
                 do {
                     for try await result in transcriberForStream.results {
                         let seg = SpeechSegment(text: String(result.text.characters), isFinal: result.isFinal)
@@ -78,19 +81,19 @@ actor SpeechPipeline {
         }
     }
 
-    func stop() async {
-        resultTask?.cancel()
-        inputContinuation?.finish()
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
-        try? await analyzer?.finalizeAndFinishThroughEndOfInput()
+    public func stop() async {
+        self.resultTask?.cancel()
+        self.inputContinuation?.finish()
+        self.engine.inputNode.removeTap(onBus: 0)
+        self.engine.stop()
+        try? await self.analyzer?.finalizeAndFinishThroughEndOfInput()
     }
 
     private func handleBuffer(_ buffer: AVAudioPCMBuffer, targetFormat: AVAudioFormat) async {
         do {
             let converted = try converter.convert(buffer, to: targetFormat)
             let input = AnalyzerInput(buffer: converted)
-            inputContinuation?.yield(input)
+            self.inputContinuation?.yield(input)
         } catch {
             // drop on conversion failure
         }

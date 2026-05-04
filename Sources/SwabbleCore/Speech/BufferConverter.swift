@@ -25,7 +25,8 @@ final class BufferConverter {
         let sampleRateRatio = converter.outputFormat.sampleRate / converter.inputFormat.sampleRate
         let scaledInputFrameLength = Double(buffer.frameLength) * sampleRateRatio
         let frameCapacity = AVAudioFrameCount(scaledInputFrameLength.rounded(.up))
-        guard let conversionBuffer = AVAudioPCMBuffer(pcmFormat: converter.outputFormat, frameCapacity: frameCapacity) else {
+        guard let conversionBuffer = AVAudioPCMBuffer(pcmFormat: converter.outputFormat, frameCapacity: frameCapacity)
+        else {
             throw ConverterError.failedToCreateConversionBuffer
         }
 

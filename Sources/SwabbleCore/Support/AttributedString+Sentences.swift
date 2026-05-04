@@ -3,7 +3,7 @@ import Foundation
 import NaturalLanguage
 
 extension AttributedString {
-    func sentences(maxLength: Int? = nil) -> [AttributedString] {
+    public func sentences(maxLength: Int? = nil) -> [AttributedString] {
         let tokenizer = NLTokenizer(unit: .sentence)
         let string = String(characters)
         tokenizer.string = string
@@ -12,8 +12,7 @@ extension AttributedString {
                 $0,
                 AttributedString.Index($0.lowerBound, within: self)!
                     ..<
-                    AttributedString.Index($0.upperBound, within: self)!
-            )
+                    AttributedString.Index($0.upperBound, within: self)!)
         }
         let ranges = sentenceRanges.flatMap { sentenceStringRange, sentenceRange in
             let sentence = self[sentenceRange]
@@ -57,8 +56,7 @@ extension AttributedString {
             var attributes = AttributeContainer()
             attributes[AttributeScopes.SpeechAttributes.TimeRangeAttribute.self] = CMTimeRange(
                 start: start,
-                end: end
-            )
+                end: end)
             return AttributedString(self[range].characters, attributes: attributes)
         }
     }

@@ -1,40 +1,38 @@
 import Foundation
 
-actor TranscriptsStore {
-    static let shared = TranscriptsStore()
+public actor TranscriptsStore {
+    public static let shared = TranscriptsStore()
 
     private var entries: [String] = []
     private let limit = 100
     private let fileURL: URL
 
-    init() {
+    public init() {
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/swabble", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("transcripts.log")
+        self.fileURL = dir.appendingPathComponent("transcripts.log")
         if let data = try? Data(contentsOf: fileURL),
            let text = String(data: data, encoding: .utf8)
         {
-            entries = text.split(separator: "\n").map(String.init).suffix(limit)
+            self.entries = text.split(separator: "\n").map(String.init).suffix(self.limit)
         }
     }
 
-    func append(text: String) {
-        entries.append(text)
-        if entries.count > limit {
-            entries.removeFirst(entries.count - limit)
+    public func append(text: String) {
+        self.entries.append(text)
+        if self.entries.count > self.limit {
+            self.entries.removeFirst(self.entries.count - self.limit)
         }
-        let body = entries.joined(separator: "\n")
-        try? body.write(to: fileURL, atomically: false, encoding: .utf8)
+        let body = self.entries.joined(separator: "\n")
+        try? body.write(to: self.fileURL, atomically: false, encoding: .utf8)
     }
 
-    func latest() -> [String] {
-        entries
-    }
+    public func latest() -> [String] { self.entries }
 }
 
-private extension String {
-    func appendLine(to url: URL) throws {
+extension String {
+    private func appendLine(to url: URL) throws {
         let data = (self + "\n").data(using: .utf8) ?? Data()
         if FileManager.default.fileExists(atPath: url.path) {
             let handle = try FileHandle(forWritingTo: url)

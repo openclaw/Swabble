@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import swabble
+@testable import Swabble
 
 @Test
 func configRoundTrip() throws {

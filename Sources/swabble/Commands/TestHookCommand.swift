@@ -1,5 +1,6 @@
 import Commander
 import Foundation
+import Swabble
 
 @MainActor
 struct TestHookCommand: ParsableCommand {
@@ -14,16 +15,16 @@ struct TestHookCommand: ParsableCommand {
 
     init(parsed: ParsedValues) {
         self.init()
-        if let positional = parsed.positional.first { text = positional }
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if let positional = parsed.positional.first { self.text = positional }
+        if let cfg = parsed.options["config"]?.last { self.configPath = cfg }
     }
 
     mutating func run() async throws {
-        let cfg = try ConfigLoader.load(at: configURL)
+        let cfg = try ConfigLoader.load(at: self.configURL)
         let runner = HookRunner(config: cfg)
-        try await runner.run(job: HookJob(text: text, timestamp: Date()))
+        try await runner.run(job: HookJob(text: self.text, timestamp: Date()))
         print("hook invoked")
     }
 
-    private var configURL: URL? { configPath.map { URL(fileURLWithPath: $0) } }
+    private var configURL: URL? { self.configPath.map { URL(fileURLWithPath: $0) } }
 }

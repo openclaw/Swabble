@@ -1,43 +1,53 @@
 import Foundation
 
-struct HookJob: Sendable {
-    let text: String
-    let timestamp: Date
+public struct HookJob: Sendable {
+    public let text: String
+    public let timestamp: Date
+
+    public init(text: String, timestamp: Date) {
+        self.text = text
+        self.timestamp = timestamp
+    }
 }
 
-actor HookRunner {
+public actor HookRunner {
     private let config: SwabbleConfig
     private var lastRun: Date?
     private let hostname: String
 
-    init(config: SwabbleConfig) {
+    public init(config: SwabbleConfig) {
         self.config = config
         self.hostname = Host.current().localizedName ?? "host"
     }
 
-    func shouldRun() -> Bool {
-        guard config.hook.cooldownSeconds > 0 else { return true }
+    public func shouldRun() -> Bool {
+        guard self.config.hook.cooldownSeconds > 0 else { return true }
         if let lastRun, Date().timeIntervalSince(lastRun) < config.hook.cooldownSeconds {
             return false
         }
         return true
     }
 
-    func run(job: HookJob) async throws {
-        guard shouldRun() else { return }
-        guard !config.hook.command.isEmpty else { throw NSError(domain: "Hook", code: 1, userInfo: [NSLocalizedDescriptionKey: "hook command not set"]) }
+    public func run(job: HookJob) async throws {
+        guard self.shouldRun() else { return }
+        guard !self.config.hook.command.isEmpty else { throw NSError(
+            domain: "Hook",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "hook command not set"]) }
 
-        let prefix = config.hook.prefix.replacingOccurrences(of: "${hostname}", with: hostname)
+        let prefix = self.config.hook.prefix.replacingOccurrences(of: "${hostname}", with: self.hostname)
         let payload = prefix + job.text
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: config.hook.command)
-        process.arguments = config.hook.args + [payload]
+        process.executableURL = URL(fileURLWithPath: self.config.hook.command)
+        process.arguments = self.config.hook.args + [payload]
 
         var env = ProcessInfo.processInfo.environment
         env["SWABBLE_TEXT"] = job.text
         env["SWABBLE_PREFIX"] = prefix
-        for (k, v) in config.hook.env { env[k] = v }
+        for (k, v) in self.config.hook.env {
+            env[k] = v
+        }
         process.environment = env
 
         let pipe = Pipe()
@@ -60,6 +70,6 @@ actor HookRunner {
             try await group.next()
             group.cancelAll()
         }
-        lastRun = Date()
+        self.lastRun = Date()
     }
 }

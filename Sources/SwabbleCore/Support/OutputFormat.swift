@@ -1,18 +1,18 @@
 import CoreMedia
 import Foundation
 
-enum OutputFormat: String {
+public enum OutputFormat: String {
     case txt
     case srt
 
-    var needsAudioTimeRange: Bool {
+    public var needsAudioTimeRange: Bool {
         switch self {
         case .srt: true
         default: false
         }
     }
 
-    func text(for transcript: AttributedString, maxLength: Int) -> String {
+    public func text(for transcript: AttributedString, maxLength: Int) -> String {
         switch self {
         case .txt:
             return String(transcript.characters)
@@ -25,7 +25,9 @@ enum OutputFormat: String {
                 return String(format: "%0.2d:%0.2d:%0.2d,%0.3d", h, m, s, ms)
             }
 
-            return transcript.sentences(maxLength: maxLength).compactMap { (sentence: AttributedString) -> (CMTimeRange, String)? in
+            return transcript.sentences(maxLength: maxLength).compactMap { (sentence: AttributedString) -> (
+                CMTimeRange,
+                String)? in
                 guard let timeRange = sentence.audioTimeRange else { return nil }
                 return (timeRange, String(sentence.characters))
             }.enumerated().map { index, run in

@@ -1,5 +1,6 @@
 import Commander
 import Foundation
+import Swabble
 
 @MainActor
 struct ServeCommand: ParsableCommand {
@@ -16,19 +17,19 @@ struct ServeCommand: ParsableCommand {
 
     init(parsed: ParsedValues) {
         self.init()
-        if parsed.flags.contains("noWake") { noWake = true }
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if parsed.flags.contains("noWake") { self.noWake = true }
+        if let cfg = parsed.options["config"]?.last { self.configPath = cfg }
     }
 
     mutating func run() async throws {
         var cfg: SwabbleConfig
         do {
-            cfg = try ConfigLoader.load(at: configURL)
+            cfg = try ConfigLoader.load(at: self.configURL)
         } catch {
             cfg = SwabbleConfig()
-            try ConfigLoader.save(cfg, at: configURL)
+            try ConfigLoader.save(cfg, at: self.configURL)
         }
-        if noWake {
+        if self.noWake {
             cfg.wake.enabled = false
         }
 
@@ -36,7 +37,9 @@ struct ServeCommand: ParsableCommand {
         logger.info("swabble serve starting (wake: \(cfg.wake.enabled ? cfg.wake.word : "disabled"))")
         let pipeline = SpeechPipeline()
         do {
-            let stream = try await pipeline.start(localeIdentifier: cfg.speech.localeIdentifier, etiquette: cfg.speech.etiquetteReplacements)
+            let stream = try await pipeline.start(
+                localeIdentifier: cfg.speech.localeIdentifier,
+                etiquette: cfg.speech.etiquetteReplacements)
             for await seg in stream {
                 if cfg.wake.enabled {
                     guard Self.matchesWake(text: seg.text, cfg: cfg) else { continue }
@@ -61,7 +64,7 @@ struct ServeCommand: ParsableCommand {
     }
 
     private var configURL: URL? {
-        configPath.map { URL(fileURLWithPath: $0) }
+        self.configPath.map { URL(fileURLWithPath: $0) }
     }
 
     private static func matchesWake(text: String, cfg: SwabbleConfig) -> Bool {
