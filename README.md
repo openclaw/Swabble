@@ -1,4 +1,6 @@
-# 🎙️ Swabble — Speech.framework wake-word hook daemon (macOS 26)
+# 🎙️ Swabble
+
+Speech.framework wake-word hook daemon for macOS 26.
 
 swabble is a Swift 6.2, macOS 26-only rewrite of the brabble voice daemon. It listens on your mic, gates on a wake word, transcribes locally using Apple's new SpeechAnalyzer + SpeechTranscriber, then fires a shell hook with the transcript. No cloud calls, no Whisper binaries.
 
