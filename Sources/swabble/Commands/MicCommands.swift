@@ -58,5 +58,7 @@ struct MicSet: ParsableCommand {
         print("saved device index \(self.index)")
     }
 
-    private var configURL: URL? { self.configPath.map { URL(fileURLWithPath: $0) } }
+    private var configURL: URL? {
+        self.configPath.map { URL(fileURLWithPath: $0) }
+    }
 }

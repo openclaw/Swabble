@@ -33,5 +33,7 @@ struct DoctorCommand: ParsableCommand {
         print("Mics found: \(session.devices.count)")
     }
 
-    private var configURL: URL? { self.configPath.map { URL(fileURLWithPath: $0) } }
+    private var configURL: URL? {
+        self.configPath.map { URL(fileURLWithPath: $0) }
+    }
 }

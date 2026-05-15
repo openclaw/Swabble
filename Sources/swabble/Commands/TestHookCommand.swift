@@ -26,5 +26,7 @@ struct TestHookCommand: ParsableCommand {
         print("hook invoked")
     }
 
-    private var configURL: URL? { self.configPath.map { URL(fileURLWithPath: $0) } }
+    private var configURL: URL? {
+        self.configPath.map { URL(fileURLWithPath: $0) }
+    }
 }

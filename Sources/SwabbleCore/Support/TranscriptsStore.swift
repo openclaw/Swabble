@@ -28,7 +28,9 @@ public actor TranscriptsStore {
         try? body.write(to: self.fileURL, atomically: false, encoding: .utf8)
     }
 
-    public func latest() -> [String] { self.entries }
+    public func latest() -> [String] {
+        self.entries
+    }
 }
 
 extension String {

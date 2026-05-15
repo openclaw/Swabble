@@ -22,5 +22,7 @@ struct SetupCommand: ParsableCommand {
         print("wrote config to \(self.configURL?.path ?? SwabbleConfig.defaultPath.path)")
     }
 
-    private var configURL: URL? { self.configPath.map { URL(fileURLWithPath: $0) } }
+    private var configURL: URL? {
+        self.configPath.map { URL(fileURLWithPath: $0) }
+    }
 }
