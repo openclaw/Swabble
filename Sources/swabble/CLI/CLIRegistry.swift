@@ -14,7 +14,8 @@ enum CLIRegistry {
             abstract: "Microphone management",
             discussion: nil,
             signature: CommandSignature(),
-            subcommands: [micList, micSet])
+            subcommands: [micList, micSet],
+        )
         let serviceRoot = CommandDescriptor(
             name: "service",
             abstract: "launchd helper",
@@ -24,7 +25,8 @@ enum CLIRegistry {
                 descriptor(for: ServiceInstall.self),
                 descriptor(for: ServiceUninstall.self),
                 descriptor(for: ServiceStatus.self),
-            ])
+            ],
+        )
         let doctorDesc = descriptor(for: DoctorCommand.self)
         let setupDesc = descriptor(for: SetupCommand.self)
         let healthDesc = descriptor(for: HealthCommand.self)
@@ -54,7 +56,8 @@ enum CLIRegistry {
                 stopDesc,
                 restartDesc,
                 statusDesc,
-            ])
+            ],
+        )
         return [root]
     }
 
@@ -65,6 +68,7 @@ enum CLIRegistry {
             abstract: type.commandDescription.abstract,
             discussion: type.commandDescription.discussion,
             signature: sig,
-            subcommands: [])
+            subcommands: [],
+        )
     }
 }

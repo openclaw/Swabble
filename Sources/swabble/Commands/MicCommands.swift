@@ -9,7 +9,8 @@ struct MicCommand: ParsableCommand {
         CommandDescription(
             commandName: "mic",
             abstract: "Microphone management",
-            subcommands: [MicList.self, MicSet.self])
+            subcommands: [MicList.self, MicSet.self],
+        )
     }
 }
 
@@ -26,7 +27,8 @@ struct MicList: ParsableCommand {
         let session = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.microphone, .external],
             mediaType: .audio,
-            position: .unspecified)
+            position: .unspecified,
+        )
         let devices = session.devices
         if devices.isEmpty { print("no audio inputs found"); return }
         for (idx, device) in devices.enumerated() {
@@ -47,18 +49,18 @@ struct MicSet: ParsableCommand {
     init() {}
     init(parsed: ParsedValues) {
         self.init()
-        if let value = parsed.positional.first, let intVal = Int(value) { self.index = intVal }
-        if let cfg = parsed.options["config"]?.last { self.configPath = cfg }
+        if let value = parsed.positional.first, let intVal = Int(value) { index = intVal }
+        if let cfg = parsed.options["config"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
-        var cfg = try ConfigLoader.load(at: self.configURL)
-        cfg.audio.deviceIndex = self.index
-        try ConfigLoader.save(cfg, at: self.configURL)
-        print("saved device index \(self.index)")
+        var cfg = try ConfigLoader.load(at: configURL)
+        cfg.audio.deviceIndex = index
+        try ConfigLoader.save(cfg, at: configURL)
+        print("saved device index \(index)")
     }
 
     private var configURL: URL? {
-        self.configPath.map { URL(fileURLWithPath: $0) }
+        configPath.map { URL(fileURLWithPath: $0) }
     }
 }

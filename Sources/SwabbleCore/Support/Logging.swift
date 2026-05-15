@@ -32,28 +32,28 @@ public struct Logger: Sendable {
     }
 
     public func trace(_ msg: String) {
-        self.log(.trace, msg)
+        log(.trace, msg)
     }
 
     public func debug(_ msg: String) {
-        self.log(.debug, msg)
+        log(.debug, msg)
     }
 
     public func info(_ msg: String) {
-        self.log(.info, msg)
+        log(.info, msg)
     }
 
     public func warn(_ msg: String) {
-        self.log(.warn, msg)
+        log(.warn, msg)
     }
 
     public func error(_ msg: String) {
-        self.log(.error, msg)
+        log(.error, msg)
     }
 }
 
-extension LogLevel {
-    public init?(configValue: String) {
+public extension LogLevel {
+    init?(configValue: String) {
         self.init(rawValue: configValue.lowercased())
     }
 }

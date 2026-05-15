@@ -14,14 +14,14 @@ struct DoctorCommand: ParsableCommand {
     init() {}
     init(parsed: ParsedValues) {
         self.init()
-        if let cfg = parsed.options["config"]?.last { self.configPath = cfg }
+        if let cfg = parsed.options["config"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
         let auth = await SFSpeechRecognizer.authorizationStatus()
         print("Speech auth: \(auth)")
         do {
-            _ = try ConfigLoader.load(at: self.configURL)
+            _ = try ConfigLoader.load(at: configURL)
             print("Config: OK")
         } catch {
             print("Config missing or invalid; run setup")
@@ -29,11 +29,12 @@ struct DoctorCommand: ParsableCommand {
         let session = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.microphone, .external],
             mediaType: .audio,
-            position: .unspecified)
+            position: .unspecified,
+        )
         print("Mics found: \(session.devices.count)")
     }
 
     private var configURL: URL? {
-        self.configPath.map { URL(fileURLWithPath: $0) }
+        configPath.map { URL(fileURLWithPath: $0) }
     }
 }

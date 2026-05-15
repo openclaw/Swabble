@@ -7,7 +7,8 @@ struct ServiceRootCommand: ParsableCommand {
         CommandDescription(
             commandName: "service",
             abstract: "Manage launchd agent",
-            subcommands: [ServiceInstall.self, ServiceUninstall.self, ServiceStatus.self])
+            subcommands: [ServiceInstall.self, ServiceUninstall.self, ServiceStatus.self],
+        )
     }
 }
 
@@ -28,11 +29,11 @@ private enum LaunchdHelper {
             "KeepAlive": true,
         ]
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
-        try data.write(to: self.plistURL)
+        try data.write(to: plistURL)
     }
 
     static func removePlist() throws {
-        try? FileManager.default.removeItem(at: self.plistURL)
+        try? FileManager.default.removeItem(at: plistURL)
     }
 }
 
