@@ -1,3 +1,5 @@
+![Swabble banner](docs/assets/readme-banner.jpg)
+
 # 🎙️ Swabble
 
 Speech.framework wake-word hook daemon for macOS 26.
