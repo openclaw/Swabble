@@ -4,6 +4,7 @@ Speech.framework wake-word hook daemon for macOS 26.
 
 swabble is a Swift 6.2, macOS 26-only rewrite of the brabble voice daemon. It listens on your mic, gates on a wake word, transcribes locally using Apple's new SpeechAnalyzer + SpeechTranscriber, then fires a shell hook with the transcript. No cloud calls, no Whisper binaries.
 
+- **Docs**: <https://swabble.ai/>
 - **Local-only**: Speech.framework on-device models; zero network usage.
 - **Wake word**: Default `clawd` (aliases `claude`), optional `--no-wake` bypass.
 - **Hooks**: Run any command with prefix/env, cooldown, min_chars, timeout.
@@ -37,7 +38,7 @@ Add swabble as a SwiftPM dependency and import the `Swabble` product to reuse th
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/steipete/swabble.git", branch: "main"),
+    .package(url: "https://github.com/openclaw/swabble.git", branch: "main"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "Swabble", package: "swabble")]),

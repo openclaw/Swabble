@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Swabble docs">
+  <rect width="1200" height="630" fill="#0c0e14"/>
+  <circle cx="920" cy="118" r="220" fill="#0f8f86" opacity=".22"/>
+  <circle cx="170" cy="520" r="260" fill="#ff6b57" opacity=".12"/>
+  <path d="M120 414c118-92 221-92 309 0s191 92 309 0 221-92 309 0" fill="none" stroke="#39d4c6" stroke-width="16" stroke-linecap="round" opacity=".55"/>
+  <rect x="96" y="88" width="146" height="146" rx="38" fill="url(#g)"/>
+  <path d="M135 168c0 18.8 15.2 34 34 34s34-15.2 34-34" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <rect x="157" y="116" width="24" height="64" rx="12" fill="#fff"/>
+  <path d="M169 202v26M145 228h48" stroke="#f7c873" stroke-width="12" stroke-linecap="round"/>
+  <text x="96" y="340" fill="#f3f5f9" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="88" font-weight="750">swabble</text>
+  <text x="102" y="420" fill="#cbd2dc" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="42">Local speech hooks for macOS</text>
+  <text x="102" y="492" fill="#8d96a4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34">$ swift run swabble setup</text>
+  <defs><linearGradient id="g" x1="96" x2="242" y1="88" y2="234"><stop stop-color="#22c7b8"/><stop offset="1" stop-color="#0f8f86"/></linearGradient></defs>
+</svg>

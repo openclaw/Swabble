@@ -1,3 +1,8 @@
+---
+title: Spec
+description: "Initial architecture notes for the macOS 26 speech hook daemon."
+---
+
 # swabble — macOS 26 speech hook daemon (Swift 6.2)
 
 Goal: brabble-style always-on voice hook for macOS 26 using Apple Speech.framework (SpeechAnalyzer + SpeechTranscriber) instead of whisper.cpp. Local-only, wake word gated, dispatches a shell hook with the transcript.

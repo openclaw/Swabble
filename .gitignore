@@ -4,6 +4,7 @@
 # SwiftPM / Build
 /.build
 /.swiftpm
+/dist
 /DerivedData
 xcuserdata/
 *.xcuserstate
