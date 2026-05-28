@@ -9,8 +9,7 @@ const docsDir = path.join(root, "docs");
 const outDir = path.join(root, "dist", "docs-site");
 const repoBase = "https://github.com/openclaw/Swabble";
 const repoEditBase = `${repoBase}/edit/main/docs`;
-const cname = readCname();
-const siteBase = cname ? `https://${cname}` : "";
+const siteBase = "https://swabble.ai";
 
 const productName = "swabble";
 const productTagline = "Local speech hooks for macOS";
@@ -77,7 +76,6 @@ for (const page of pages) {
 fs.writeFileSync(path.join(outDir, "favicon.svg"), faviconSvg(), "utf8");
 copyStaticAsset("social-card.svg");
 fs.writeFileSync(path.join(outDir, ".nojekyll"), "", "utf8");
-if (cname) fs.writeFileSync(path.join(outDir, "CNAME"), cname, "utf8");
 validateLinks(outDir);
 fs.writeFileSync(path.join(outDir, "llms.txt"), llmsTxt(), "utf8");
 console.log(`built docs site: ${path.relative(root, outDir)}`);
@@ -141,13 +139,6 @@ function pageUrl(origin, outRel) {
   const normalized = outRel === "index.html" ? "" : outRel.replace(/(?:^|\/)index\.html$/, (match) => match === "index.html" ? "" : "/");
   if (!origin) return normalized || "index.html";
   return normalized ? `${origin}/${normalized}` : `${origin}/`;
-}
-
-function readCname() {
-  for (const candidate of [path.join(docsDir, "CNAME"), path.join(root, "CNAME")]) {
-    if (fs.existsSync(candidate)) return fs.readFileSync(candidate, "utf8").trim();
-  }
-  return "";
 }
 
 function copyStaticAsset(name) {
