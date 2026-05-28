@@ -109,14 +109,16 @@ main{min-width:0;padding:32px clamp(20px,4.5vw,56px) 80px;max-width:1180px;margi
 .home-cta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 18px}
 .home-cta .btn{display:inline-flex;align-items:center;gap:7px;border-radius:8px;padding:10px 16px;font-weight:600;font-size:.92rem;text-decoration:none;transition:background .15s,border-color .15s,color .15s,transform .12s}
 .home-cta .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+:root[data-theme="dark"] .home-cta .btn-primary{color:#06120f}
 .home-cta .btn-primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);text-decoration:none}
 .home-cta .btn-ghost{padding:10px 16px}
 .home-install{display:flex;align-items:center;gap:12px;background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:10px 10px 10px 16px;font:500 .9rem/1.2 "JetBrains Mono","SF Mono",ui-monospace,monospace;max-width:32em;border:1px solid #1f2937}
 .home-install .prompt{color:#64748b;user-select:none;flex:0 0 auto}
 .home-install code{flex:1;background:transparent;border:0;color:var(--code-fg);font:inherit;padding:0;white-space:pre;overflow:hidden;text-overflow:ellipsis}
-.home-install .copy{flex:0 0 auto;background:rgba(255,255,255,.08);color:var(--code-fg);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:5px 11px;font:500 .72rem/1 "Inter",sans-serif;cursor:pointer;transition:background .15s,border-color .15s}
+.home-install .copy{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:42px;height:34px;background:rgba(255,255,255,.08);color:var(--code-fg);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:0;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .home-install .copy:hover{background:rgba(255,255,255,.16)}
-.home-install .copy.copied{background:var(--accent);border-color:var(--accent)}
+.home-install .copy.copied{background:var(--accent);border-color:var(--accent);color:#06120f}
+.copy svg{display:block;width:16px;height:16px;stroke:currentColor}
 .home-services{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 18px}
 .home-services span{display:inline-block;padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:.78rem;color:var(--muted);background:var(--paper)}
 .doc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:48px;margin-top:24px}
@@ -144,10 +146,10 @@ body:not(.home) .doc>h1:first-child{display:none}
 .doc pre::-webkit-scrollbar{height:8px;width:8px}
 .doc pre::-webkit-scrollbar-thumb{background:#334155;border-radius:8px}
 .doc pre code{display:block;background:transparent;border:0;color:inherit;padding:0;font-size:1em;white-space:pre}
-.doc pre .copy{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.06);color:var(--code-fg);border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:3px 9px;font:500 .7rem/1 "Inter",sans-serif;cursor:pointer;opacity:0;transition:opacity .15s,background .15s,border-color .15s}
+.doc pre .copy{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);color:var(--code-fg);border:1px solid rgba(255,255,255,.16);border-radius:6px;width:30px;height:30px;padding:0;cursor:pointer;opacity:0;transition:opacity .15s,background .15s,border-color .15s,color .15s}
 .doc pre:hover .copy,.doc pre .copy:focus{opacity:1}
 .doc pre .copy:hover{background:rgba(255,255,255,.12)}
-.doc pre .copy.copied{background:var(--accent);border-color:var(--accent);opacity:1}
+.doc pre .copy.copied{background:var(--accent);border-color:var(--accent);color:#06120f;opacity:1}
 .doc pre .hl-c{color:var(--hl-comment);font-style:italic}
 .doc pre .hl-s{color:var(--hl-string)}
 .doc pre .hl-n{color:var(--hl-number)}
@@ -261,7 +263,9 @@ if(mobileNav.addEventListener)mobileNav.addEventListener('change',syncSidebarFor
 else mobileNav.addListener?.(syncSidebarForViewport);
 const input=document.getElementById('doc-search');
 input?.addEventListener('input',()=>{const q=input.value.trim().toLowerCase();document.querySelectorAll('nav section').forEach(sec=>{let any=false;sec.querySelectorAll('.nav-link').forEach(a=>{const m=!q||a.textContent.toLowerCase().includes(q);a.style.display=m?'block':'none';if(m)any=true});sec.style.display=any?'block':'none'})});
-function attachCopy(target,getText){const btn=document.createElement('button');btn.type='button';btn.className='copy';btn.textContent='Copy';btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(getText());btn.textContent='Copied';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},1400)}catch{btn.textContent='Failed';setTimeout(()=>{btn.textContent='Copy'},1400)}});target.appendChild(btn)}
+const copyIcon='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="10" height="10" rx="2" stroke-width="2"/><path d="M5 15V7a2 2 0 0 1 2-2h8" stroke-width="2" stroke-linecap="round"/></svg>';
+const checkIcon='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4 4L19 7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function attachCopy(target,getText){const btn=document.createElement('button');btn.type='button';btn.className='copy';btn.setAttribute('aria-label','Copy');btn.title='Copy';btn.innerHTML=copyIcon;btn.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(getText());btn.innerHTML=checkIcon;btn.setAttribute('aria-label','Copied');btn.title='Copied';btn.classList.add('copied');setTimeout(()=>{btn.innerHTML=copyIcon;btn.setAttribute('aria-label','Copy');btn.title='Copy';btn.classList.remove('copied')},1400)}catch{btn.setAttribute('aria-label','Copy failed');btn.title='Copy failed';setTimeout(()=>{btn.setAttribute('aria-label','Copy');btn.title='Copy'},1400)}});target.appendChild(btn)}
 document.querySelectorAll('.doc pre').forEach(pre=>attachCopy(pre,()=>pre.querySelector('code')?.textContent??''));
 document.querySelectorAll('.home-install').forEach(el=>attachCopy(el,()=>el.querySelector('code')?.textContent??''));
 const tocLinks=document.querySelectorAll('.toc a');
