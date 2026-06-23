@@ -14,7 +14,7 @@ jobs:
         working-directory: swabble
     steps:
       - name: Checkout swabble
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: swabble
 

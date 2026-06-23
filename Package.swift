@@ -11,8 +11,7 @@ let package = Package(
         .executable(name: "swabble", targets: ["SwabbleCLI"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/steipete/Commander.git", from: "0.2.0"),
-        .package(url: "https://github.com/apple/swift-testing", from: "0.99.0"),
+        .package(url: "https://github.com/steipete/Commander.git", from: "0.2.2"),
     ],
     targets: [
         .target(
@@ -28,10 +27,7 @@ let package = Package(
             path: "Sources/swabble"),
         .testTarget(
             name: "swabbleTests",
-            dependencies: [
-                "Swabble",
-                .product(name: "Testing", package: "swift-testing"),
-            ]),
+            dependencies: ["Swabble"]),
     ],
     swiftLanguageModes: [.v6]
 )
