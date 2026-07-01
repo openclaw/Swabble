@@ -43,21 +43,21 @@ struct MicSet: ParsableCommand {
     @Option(name: .long("config"), help: "Path to config JSON") var configPath: String?
 
     static var commandDescription: CommandDescription {
-        CommandDescription(commandName: "set", abstract: "Set default input device index")
+        CommandDescription(commandName: "set", abstract: "Save preferred input device index")
     }
 
     init() {}
     init(parsed: ParsedValues) {
         self.init()
         if let value = parsed.positional.first, let intVal = Int(value) { index = intVal }
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if let cfg = parsed.options["configPath"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
         var cfg = try ConfigLoader.load(at: configURL)
         cfg.audio.deviceIndex = index
         try ConfigLoader.save(cfg, at: configURL)
-        print("saved device index \(index)")
+        print("saved preferred device index \(index); serve currently uses the system default input")
     }
 
     private var configURL: URL? {

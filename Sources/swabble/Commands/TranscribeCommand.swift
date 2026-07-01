@@ -28,23 +28,31 @@ struct TranscribeCommand: ParsableCommand {
         if let positional = parsed.positional.first { inputFile = positional }
         if let loc = parsed.options["locale"]?.last { locale = loc }
         if parsed.flags.contains("censor") { censor = true }
-        if let out = parsed.options["output"]?.last { outputFile = out }
+        if let out = parsed.options["outputFile"]?.last { outputFile = out }
         if let fmt = parsed.options["format"]?.last { format = fmt }
         if let len = parsed.options["maxLength"]?.last, let intVal = Int(len) { maxLength = intVal }
     }
 
     mutating func run() async throws {
+        guard let outputFormat = OutputFormat(rawValue: format) else {
+            throw TranscribeError.invalidFormat(format)
+        }
+        if outputFormat == .srt, maxLength <= 0 {
+            throw TranscribeError.invalidMaxLength(maxLength)
+        }
         let fileURL = URL(fileURLWithPath: inputFile)
         let audioFile = try AVAudioFile(forReading: fileURL)
-
-        let outputFormat = OutputFormat(rawValue: format) ?? .txt
-
+        let requestedLocale = Locale(identifier: locale)
+        guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: requestedLocale) else {
+            throw TranscribeError.unsupportedLocale(locale)
+        }
         let transcriber = SpeechTranscriber(
-            locale: Locale(identifier: locale),
+            locale: supportedLocale,
             transcriptionOptions: censor ? [.etiquetteReplacements] : [],
             reportingOptions: [],
             attributeOptions: outputFormat.needsAudioTimeRange ? [.audioTimeRange] : [],
         )
+        try await SpeechAssets.ensureInstalled(for: [transcriber])
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         try await analyzer.start(inputAudioFile: audioFile, finishAfterFile: true)
 
@@ -58,6 +66,23 @@ struct TranscribeCommand: ParsableCommand {
             try output.write(to: URL(fileURLWithPath: path), atomically: false, encoding: .utf8)
         } else {
             print(output)
+        }
+    }
+}
+
+private enum TranscribeError: Error, CustomStringConvertible {
+    case invalidFormat(String)
+    case invalidMaxLength(Int)
+    case unsupportedLocale(String)
+
+    var description: String {
+        switch self {
+        case let .invalidFormat(format):
+            "unsupported output format '\(format)'; expected txt or srt"
+        case let .invalidMaxLength(length):
+            "max length must be positive for srt output, got \(length)"
+        case let .unsupportedLocale(locale):
+            "unsupported speech locale '\(locale)'"
         }
     }
 }

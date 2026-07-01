@@ -14,7 +14,7 @@ jobs:
         working-directory: swabble
     steps:
       - name: Checkout swabble
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: swabble
 
@@ -52,3 +52,24 @@ jobs:
 
       - name: Test
         run: swift test --parallel
+
+      - name: Release build and CLI smoke test
+        run: |
+          set -euo pipefail
+          swift build -c release
+          smoke_dir="$RUNNER_TEMP/swabble-smoke"
+          config="$smoke_dir/config.json"
+          binary=".build/release/swabble"
+          test "$("$binary" health)" = "ok"
+          test "$("$binary" health --json)" = '{"status":"ok"}'
+          "$binary" setup --config "$config"
+          test -f "$config"
+          test "$(stat -f '%Lp' "$config")" = "600"
+          if "$binary" setup --config "$config"; then
+            echo "setup unexpectedly replaced an existing config" >&2
+            exit 1
+          fi
+          "$binary" status --config "$config" --json | grep -q '"wakeEnabled":true'
+          plutil -replace hook.command -string /usr/bin/true "$config"
+          "$binary" test-hook hi --config "$config" | grep -q '^hook invoked$'
+          "$binary" --help | grep -q '^Usage: swabble <command>$'

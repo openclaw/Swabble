@@ -21,3 +21,6 @@ The hook environment includes:
 
 Swabble applies the configured cooldown, minimum character count, and timeout before running the hook. Keep the hook command idempotent where possible: speech transcripts can be retried, partial, or corrected by the system recognizer.
 
+The hook must exit successfully. Timeouts and nonzero exits are reported as errors. `SWABBLE_TEXT` and `SWABBLE_PREFIX` always describe the current invocation and cannot be overridden through `hook.env`.
+
+`swabble test-hook` bypasses minimum-length and cooldown gating so short test phrases always exercise the configured command; daemon invocations still enforce both guardrails.

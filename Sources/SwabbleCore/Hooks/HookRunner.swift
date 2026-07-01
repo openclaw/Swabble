@@ -10,6 +10,12 @@ public struct HookJob: Sendable {
     }
 }
 
+public enum HookRunnerError: Error, Equatable {
+    case missingCommand
+    case timedOut
+    case unsuccessfulExit(Int32)
+}
+
 public actor HookRunner {
     private let config: SwabbleConfig
     private var lastRun: Date?
@@ -28,49 +34,55 @@ public actor HookRunner {
         return true
     }
 
-    public func run(job: HookJob) async throws {
-        guard shouldRun() else { return }
-        guard !config.hook.command.isEmpty else { throw NSError(
-            domain: "Hook",
-            code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "hook command not set"],
-        ) }
+    @discardableResult
+    public func run(job: HookJob) async throws -> Bool {
+        guard shouldRun() else { return false }
+        let text = job.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= max(config.hook.minCharacters, 0) else { return false }
+        guard !config.hook.command.isEmpty else { throw HookRunnerError.missingCommand }
 
         let prefix = config.hook.prefix.replacingOccurrences(of: "${hostname}", with: hostname)
-        let payload = prefix + job.text
+        let payload = prefix + text
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: config.hook.command)
         process.arguments = config.hook.args + [payload]
 
         var env = ProcessInfo.processInfo.environment
-        env["SWABBLE_TEXT"] = job.text
-        env["SWABBLE_PREFIX"] = prefix
         for (k, v) in config.hook.env {
             env[k] = v
         }
+        // Reserved values describe this invocation and cannot be shadowed by config.
+        env["SWABBLE_TEXT"] = text
+        env["SWABBLE_PREFIX"] = prefix
         process.environment = env
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
 
         try process.run()
 
         let timeoutNanos = UInt64(max(config.hook.timeoutSeconds, 0.1) * 1_000_000_000)
-        try await withThrowingTaskGroup(of: Void.self) { group in
+        let timedOut = try await withThrowingTaskGroup(of: Bool.self) { group in
             group.addTask {
                 process.waitUntilExit()
+                return false
             }
             group.addTask {
                 try await Task.sleep(nanoseconds: timeoutNanos)
                 if process.isRunning {
                     process.terminate()
+                    return true
                 }
+                return false
             }
-            try await group.next()
+            let first = try await group.next() ?? false
             group.cancelAll()
+            return first
+        }
+
+        if timedOut { throw HookRunnerError.timedOut }
+        guard process.terminationStatus == 0 else {
+            throw HookRunnerError.unsuccessfulExit(process.terminationStatus)
         }
         lastRun = Date()
+        return true
     }
 }

@@ -5,8 +5,16 @@ import Foundation
 private func runCLI() async -> Int32 {
     do {
         let descriptors = CLIRegistry.descriptors
+        let rawArguments = Array(CommandLine.arguments.dropFirst())
+        if let help = CLIHelp.render(arguments: rawArguments, descriptors: descriptors) {
+            print(help)
+            return 0
+        }
         let program = Program(descriptors: descriptors)
-        let invocation = try program.resolve(argv: CommandLine.arguments)
+        // Commander resolves the root command as argv[0], while the OS provides
+        // the executable path there. Keep routing independent of install path.
+        let arguments = ["swabble"] + rawArguments
+        let invocation = try program.resolve(argv: arguments)
         try await dispatch(invocation: invocation)
         return 0
     } catch {
@@ -68,7 +76,7 @@ private func dispatchSwabble(path: [String], parsed: ParsedValues) async throws 
         var cmd = RestartCommand()
         try await cmd.run()
     case "status":
-        var cmd = StatusCommand()
+        var cmd = StatusCommand(parsed: parsed)
         try await cmd.run()
     default:
         throw CommanderProgramError.unknownSubcommand(command: "swabble", name: sub)

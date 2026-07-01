@@ -1,48 +1,59 @@
 import Foundation
 
 public actor TranscriptsStore {
-    public static let shared = TranscriptsStore()
+    private struct Record: Codable {
+        let text: String
+    }
+
+    public static let shared = TranscriptsStore(limit: 50)
 
     private var entries: [String] = []
-    private let limit = 100
+    private let limit: Int
     private let fileURL: URL
 
-    public init() {
-        let dir = FileManager.default.homeDirectoryForCurrentUser
+    public init(limit: Int = 50, fileURL: URL? = nil) {
+        self.limit = max(limit, 0)
+        let defaultDirectory = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/swabble", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        fileURL = dir.appendingPathComponent("transcripts.log")
-        if let data = try? Data(contentsOf: fileURL),
-           let text = String(data: data, encoding: .utf8)
-        {
-            entries = text.split(separator: "\n").map(String.init).suffix(limit)
+        self.fileURL = fileURL ?? defaultDirectory.appendingPathComponent("transcripts.log")
+        let dir = self.fileURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700],
+        )
+        if let data = try? Data(contentsOf: self.fileURL), let text = String(data: data, encoding: .utf8) {
+            let decoder = JSONDecoder()
+            entries = Array(text.split(separator: "\n").compactMap { line in
+                let lineData = Data(line.utf8)
+                if let record = try? decoder.decode(Record.self, from: lineData) {
+                    return record.text
+                }
+                // Migrate newline-delimited files written by pre-release builds.
+                return String(line)
+            }.suffix(self.limit))
         }
     }
 
-    public func append(text: String) {
+    public func append(text: String) throws {
         entries.append(text)
         if entries.count > limit {
             entries.removeFirst(entries.count - limit)
         }
-        let body = entries.joined(separator: "\n")
-        try? body.write(to: fileURL, atomically: false, encoding: .utf8)
+        let encoder = JSONEncoder()
+        let lines = try entries.map { entry in
+            let data = try encoder.encode(Record(text: entry))
+            guard let line = String(data: data, encoding: .utf8) else {
+                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            return line
+        }
+        let body = lines.isEmpty ? "" : lines.joined(separator: "\n") + "\n"
+        try body.write(to: fileURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
     }
 
     public func latest() -> [String] {
         entries
-    }
-}
-
-extension String {
-    private func appendLine(to url: URL) throws {
-        let data = (self + "\n").data(using: .utf8) ?? Data()
-        if FileManager.default.fileExists(atPath: url.path) {
-            let handle = try FileHandle(forWritingTo: url)
-            try handle.seekToEnd()
-            try handle.write(contentsOf: data)
-            try handle.close()
-        } else {
-            try data.write(to: url)
-        }
     }
 }

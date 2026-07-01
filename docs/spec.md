@@ -9,7 +9,7 @@ Goal: brabble-style always-on voice hook for macOS 26 using Apple Speech.framewo
 
 ## Requirements
 - macOS 26+, Swift 6.2, Speech.framework with on-device assets.
-- Local only; no network calls during transcription.
+- Local transcription; audio never leaves the Mac, though macOS may download Apple speech assets on first use.
 - Wake word gating (default "clawd" plus aliases) with bypass flag `--no-wake`.
 - Hook execution with cooldown, min_chars, timeout, prefix, env vars.
 - Simple config at `~/.config/swabble/config.json` (JSON, Codable) — no TOML.
@@ -19,7 +19,7 @@ Goal: brabble-style always-on voice hook for macOS 26 using Apple Speech.framewo
 - Basic status/health surfaces and mic selection stubs.
 
 ## Architecture
-- **CLI layer (Commander)**: Root command `swabble` with subcommands `serve`, `transcribe`, `test-hook`, `mic list|set`, `doctor`, `health`, `tail-log`. Runtime flags from Commander (`-v/--verbose`, `--json-output`, `--log-level`). Custom `--config` path applies everywhere.
+- **CLI layer (Commander)**: Root command `swabble` with subcommands `serve`, `transcribe`, `test-hook`, `mic list|set`, `doctor`, `health`, `tail-log`. Health and status expose JSON output; config-backed commands accept custom `--config` paths.
 - **Config**: `SwabbleConfig` Codable. Fields: audio device name/index, wake (enabled/word/aliases/sensitivity placeholder), hook (command/args/prefix/cooldown/min_chars/timeout/env), logging (level, format), transcripts (enabled, max kept), speech (locale, enableEtiquetteReplacements flag). Stored JSON; default written by `setup`.
 - **Audio + Speech pipeline**: `SpeechPipeline` wraps `AVAudioEngine` input → `SpeechAnalyzer` with `SpeechTranscriber` module. Emits partial/final transcripts via async stream. Requests `.audioTimeRange` when transcripts enabled. Handles Speech permission and asset download prompts ahead of capture.
 - **Wake gate**: text-based keyword match against latest partial/final; strips wake term before hook dispatch. `--no-wake` disables.

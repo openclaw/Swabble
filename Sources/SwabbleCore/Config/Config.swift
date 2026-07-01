@@ -70,8 +70,13 @@ public enum ConfigLoader {
     public static func save(_ config: SwabbleConfig, at path: URL?) throws {
         let url = path ?? SwabbleConfig.defaultPath
         let dir = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700],
+        )
         let data = try JSONEncoder().encode(config)
-        try data.write(to: url)
+        try data.write(to: url, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 }

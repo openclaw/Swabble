@@ -28,5 +28,4 @@ swift run swabble serve
 
 ## Local by design
 
-Swabble uses Speech.framework's on-device path. There are no Whisper binaries, no network transcription calls, and no hosted control plane. Your hook can do whatever you configure, but the speech pipeline itself stays on the Mac.
-
+Swabble uses Speech.framework's on-device path. There are no Whisper binaries, no network transcription calls, and no hosted control plane. Audio stays on the Mac; macOS may download Apple's speech model assets on first use. Your hook can do whatever you configure.
