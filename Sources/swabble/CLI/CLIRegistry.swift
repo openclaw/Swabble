@@ -36,12 +36,11 @@ enum CLIRegistry {
         let restartDesc = descriptor(for: RestartCommand.self)
         let statusDesc = descriptor(for: StatusCommand.self)
 
-        let rootSignature = CommandSignature().withStandardRuntimeFlags()
         let root = CommandDescriptor(
             name: "swabble",
             abstract: "Speech hook daemon",
             discussion: "Local wake-word → SpeechTranscriber → hook",
-            signature: rootSignature,
+            signature: CommandSignature(),
             subcommands: [
                 serveDesc,
                 transcribeDesc,
@@ -62,7 +61,7 @@ enum CLIRegistry {
     }
 
     private static func descriptor(for type: any ParsableCommand.Type) -> CommandDescriptor {
-        let sig = CommandSignature.describe(type.init()).withStandardRuntimeFlags()
+        let sig = CommandSignature.describe(type.init())
         return CommandDescriptor(
             name: type.commandDescription.commandName ?? "",
             abstract: type.commandDescription.abstract,

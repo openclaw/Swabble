@@ -6,6 +6,7 @@ description: "The JSON config fields Swabble reads at runtime."
 # Configuration
 
 Swabble reads `~/.config/swabble/config.json`. Use `--config /path/to/config.json` on commands that accept an alternate path.
+`swabble setup` creates the file with owner-only permissions and refuses to replace it unless passed `--force`.
 
 ```json
 {
@@ -28,7 +29,7 @@ Swabble reads `~/.config/swabble/config.json`. Use `--config /path/to/config.jso
 
 ## Audio
 
-`deviceIndex` and `deviceName` select an input device. Leave both empty/default to use the system default input.
+`deviceIndex` and `deviceName` reserve the preferred input selection. Live selection is not wired yet; `serve` currently uses the system default input.
 
 ## Wake
 
@@ -39,4 +40,3 @@ Swabble reads `~/.config/swabble/config.json`. Use `--config /path/to/config.jso
 `command` is the executable to run. `args` are passed before the final rendered transcript argument. `${hostname}` in `prefix` is replaced before execution.
 
 `cooldownSeconds`, `minCharacters`, and `timeoutSeconds` keep noisy partial transcripts from spamming the hook.
-

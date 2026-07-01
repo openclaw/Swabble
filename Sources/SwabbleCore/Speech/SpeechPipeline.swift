@@ -11,6 +11,7 @@ public enum SpeechPipelineError: Error {
     case authorizationDenied
     case analyzerFormatUnavailable
     case transcriberUnavailable
+    case unsupportedLocale(String)
 }
 
 /// Live microphone → SpeechAnalyzer → SpeechTranscriber pipeline.
@@ -26,15 +27,15 @@ public actor SpeechPipeline {
 
     public init() {}
 
-    public func start(localeIdentifier: String, etiquette: Bool) async throws -> AsyncStream<SpeechSegment> {
-        let auth = await requestAuthorizationIfNeeded()
-        guard auth == .authorized else { throw SpeechPipelineError.authorizationDenied }
+    public func start(
+        localeIdentifier: String,
+        etiquette: Bool,
+    ) async throws -> AsyncThrowingStream<SpeechSegment, Error> {
+        guard await requestAuthorizationIfNeeded() == .authorized else { throw SpeechPipelineError.authorizationDenied }
 
-        let transcriberModule = SpeechTranscriber(
-            locale: Locale(identifier: localeIdentifier),
-            transcriptionOptions: etiquette ? [.etiquetteReplacements] : [],
-            reportingOptions: [.volatileResults],
-            attributeOptions: [],
+        let transcriberModule = try await Self.makeTranscriber(
+            localeIdentifier: localeIdentifier,
+            etiquette: etiquette,
         )
         transcriber = transcriberModule
 
@@ -51,30 +52,37 @@ public actor SpeechPipeline {
         let inputFormat = inputNode.outputFormat(forBus: 0)
         inputNode.removeTap(onBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, _ in
-            guard let self else { return }
-            let boxed = UnsafeBuffer(buffer: buffer)
+            guard let self, let copy = Self.copy(buffer: buffer) else { return }
+            let boxed = UnsafeBuffer(buffer: copy)
             Task { await self.handleBuffer(boxed.buffer, targetFormat: analyzerFormat) }
         }
 
         engine.prepare()
-        try engine.start()
-        try await analyzer?.start(inputSequence: stream)
+        do {
+            try engine.start()
+            try await analyzer?.start(inputSequence: stream)
+        } catch {
+            inputContinuation?.finish()
+            inputNode.removeTap(onBus: 0)
+            engine.stop()
+            throw error
+        }
 
         guard let transcriberForStream = transcriber else {
             throw SpeechPipelineError.transcriberUnavailable
         }
 
-        return AsyncStream { continuation in
+        return AsyncThrowingStream { continuation in
             self.resultTask = Task {
                 do {
                     for try await result in transcriberForStream.results {
                         let seg = SpeechSegment(text: String(result.text.characters), isFinal: result.isFinal)
                         continuation.yield(seg)
                     }
+                    continuation.finish()
                 } catch {
-                    // swallow errors and finish
+                    continuation.finish(throwing: error)
                 }
-                continuation.finish()
             }
             continuation.onTermination = { _ in
                 Task { await self.stop() }
@@ -98,6 +106,41 @@ public actor SpeechPipeline {
         } catch {
             // drop on conversion failure
         }
+    }
+
+    private static func makeTranscriber(localeIdentifier: String, etiquette: Bool) async throws -> SpeechTranscriber {
+        let requestedLocale = Locale(identifier: localeIdentifier)
+        guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: requestedLocale) else {
+            throw SpeechPipelineError.unsupportedLocale(localeIdentifier)
+        }
+        let transcriber = SpeechTranscriber(
+            locale: supportedLocale,
+            transcriptionOptions: etiquette ? [.etiquetteReplacements] : [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: [],
+        )
+        try await SpeechAssets.ensureInstalled(for: [transcriber])
+        return transcriber
+    }
+
+    /// Tap buffers are only valid during the callback; copy before crossing actor isolation.
+    private nonisolated static func copy(buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength) else {
+            return nil
+        }
+        copy.frameLength = buffer.frameLength
+        let sourceBuffers = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
+        let destinationBuffers = UnsafeMutableAudioBufferListPointer(copy.mutableAudioBufferList)
+        guard sourceBuffers.count == destinationBuffers.count else { return nil }
+        for index in sourceBuffers.indices {
+            let source = sourceBuffers[index]
+            guard let sourceData = source.mData, let destinationData = destinationBuffers[index].mData else {
+                return nil
+            }
+            memcpy(destinationData, sourceData, Int(source.mDataByteSize))
+            destinationBuffers[index].mDataByteSize = source.mDataByteSize
+        }
+        return copy
     }
 
     private func requestAuthorizationIfNeeded() async -> SFSpeechRecognizerAuthorizationStatus {

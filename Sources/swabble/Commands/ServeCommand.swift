@@ -19,7 +19,7 @@ struct ServeCommand: ParsableCommand {
     init(parsed: ParsedValues) {
         self.init()
         if parsed.flags.contains("noWake") { noWake = true }
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if let cfg = parsed.options["configPath"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
@@ -37,21 +37,26 @@ struct ServeCommand: ParsableCommand {
         let logger = Logger(level: LogLevel(configValue: cfg.logging.level) ?? .info)
         logger.info("swabble serve starting (wake: \(cfg.wake.enabled ? cfg.wake.word : "disabled"))")
         let pipeline = SpeechPipeline()
+        let runner = HookRunner(config: cfg)
+        let transcripts = TranscriptsStore(limit: cfg.transcripts.maxEntries)
         do {
             let stream = try await pipeline.start(
                 localeIdentifier: cfg.speech.localeIdentifier,
                 etiquette: cfg.speech.etiquetteReplacements,
             )
-            for await seg in stream {
+            for try await seg in stream {
                 if cfg.wake.enabled {
                     guard Self.matchesWake(text: seg.text, cfg: cfg) else { continue }
                 }
                 let stripped = Self.stripWake(text: seg.text, cfg: cfg)
                 let job = HookJob(text: stripped, timestamp: Date())
-                let runner = HookRunner(config: cfg)
-                try await runner.run(job: job)
-                if cfg.transcripts.enabled {
-                    await TranscriptsStore.shared.append(text: stripped)
+                let didRun = try await runner.run(job: job)
+                if didRun, cfg.transcripts.enabled {
+                    do {
+                        try await transcripts.append(text: stripped)
+                    } catch {
+                        logger.warn("could not persist transcript: \(error)")
+                    }
                 }
                 if seg.isFinal {
                     logger.info("final: \(stripped)")

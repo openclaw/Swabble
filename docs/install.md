@@ -35,4 +35,4 @@ swift run swabble setup
 ```
 
 This writes the default JSON config to `~/.config/swabble/config.json`.
-
+It refuses to replace an existing config unless you explicitly pass `--force`.

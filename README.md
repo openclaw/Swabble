@@ -7,7 +7,7 @@ Speech.framework wake-word hook daemon for macOS 26.
 swabble is a Swift 6.2, macOS 26-only rewrite of the brabble voice daemon. It listens on your mic, gates on a wake word, transcribes locally using Apple's new SpeechAnalyzer + SpeechTranscriber, then fires a shell hook with the transcript. No cloud calls, no Whisper binaries.
 
 - **Docs**: <https://swabble.ai/>
-- **Local-only**: Speech.framework on-device models; zero network usage.
+- **Local transcription**: Audio stays on-device; macOS may download Apple's speech model assets on first use.
 - **Wake word**: Default `clawd` (aliases `claude`), optional `--no-wake` bypass.
 - **Hooks**: Run any command with prefix/env, cooldown, min_chars, timeout.
 - **Services**: launchd helper stubs for start/stop/install.
@@ -20,6 +20,9 @@ brew install swiftformat swiftlint
 
 # Build
 swift build
+
+# Inspect commands and options
+swift run swabble --help
 
 # Write default config (~/.config/swabble/config.json)
 swift run swabble setup
@@ -51,7 +54,7 @@ targets: [
 - `serve` — foreground loop (mic → wake → hook)
 - `transcribe <file>` — offline transcription (txt|srt)
 - `test-hook "text"` — invoke configured hook
-- `mic list|set <index>` — enumerate/select input device
+- `mic list|set <index>` — enumerate inputs and save a preferred device index (live selection not wired yet)
 - `setup` — write default config JSON
 - `doctor` — check Speech auth & device availability
 - `health` — prints `ok`
@@ -60,7 +63,7 @@ targets: [
 - `service install|uninstall|status` — user launchd plist (stub: prints launchctl commands)
 - `start|stop|restart` — placeholders until full launchd wiring
 
-All commands accept Commander runtime flags (`-v/--verbose`, `--json-output`, `--log-level`), plus `--config` where applicable.
+Use `swabble <command> --help` for command options. `health` and `status` support `--json`/`--json-output`; commands that read config support `--config` where listed.
 
 ## Config
 `~/.config/swabble/config.json` (auto-created by `setup`):
@@ -84,7 +87,9 @@ All commands accept Commander runtime flags (`-v/--verbose`, `--json-output`, `-
 ```
 
 - Config path override: `--config /path/to/config.json` on relevant commands.
-- Transcripts persist to `~/Library/Application Support/swabble/transcripts.log`.
+- `setup` refuses to replace an existing config unless passed `--force`.
+- Config and transcript files are written with owner-only permissions.
+- Transcripts persist as JSON lines at `~/Library/Application Support/swabble/transcripts.log`.
 
 ## Hook protocol
 When a wake-gated transcript passes min_chars & cooldown, swabble runs:

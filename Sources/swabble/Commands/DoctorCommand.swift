@@ -14,11 +14,11 @@ struct DoctorCommand: ParsableCommand {
     init() {}
     init(parsed: ParsedValues) {
         self.init()
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if let cfg = parsed.options["configPath"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
-        let auth = await SFSpeechRecognizer.authorizationStatus()
+        let auth = SFSpeechRecognizer.authorizationStatus()
         print("Speech auth: \(auth)")
         do {
             _ = try ConfigLoader.load(at: configURL)

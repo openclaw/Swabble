@@ -16,13 +16,16 @@ struct TestHookCommand: ParsableCommand {
     init(parsed: ParsedValues) {
         self.init()
         if let positional = parsed.positional.first { text = positional }
-        if let cfg = parsed.options["config"]?.last { configPath = cfg }
+        if let cfg = parsed.options["configPath"]?.last { configPath = cfg }
     }
 
     mutating func run() async throws {
-        let cfg = try ConfigLoader.load(at: configURL)
+        var cfg = try ConfigLoader.load(at: configURL)
+        // This command validates hook wiring explicitly, independent of daemon gating.
+        cfg.hook.minCharacters = 0
+        cfg.hook.cooldownSeconds = 0
         let runner = HookRunner(config: cfg)
-        try await runner.run(job: HookJob(text: text, timestamp: Date()))
+        _ = try await runner.run(job: HookJob(text: text, timestamp: Date()))
         print("hook invoked")
     }
 
