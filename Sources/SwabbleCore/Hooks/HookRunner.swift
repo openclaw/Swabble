@@ -1,4 +1,27 @@
+import Darwin
 import Foundation
+
+private enum HookProcessOutcome: Equatable {
+    case exited
+    case timedOut
+}
+
+private actor HookProcessMonitor {
+    private var outcome: HookProcessOutcome?
+    private var waiter: CheckedContinuation<HookProcessOutcome, Never>?
+
+    func resolve(_ outcome: HookProcessOutcome) {
+        guard self.outcome == nil else { return }
+        self.outcome = outcome
+        waiter?.resume(returning: outcome)
+        waiter = nil
+    }
+
+    func waitForOutcome() async -> HookProcessOutcome {
+        if let outcome { return outcome }
+        return await withCheckedContinuation { waiter = $0 }
+    }
+}
 
 public struct HookJob: Sendable {
     public let text: String
@@ -57,28 +80,32 @@ public actor HookRunner {
         env["SWABBLE_PREFIX"] = prefix
         process.environment = env
 
-        try process.run()
-
-        let timeoutNanos = UInt64(max(config.hook.timeoutSeconds, 0.1) * 1_000_000_000)
-        let timedOut = try await withThrowingTaskGroup(of: Bool.self) { group in
-            group.addTask {
-                process.waitUntilExit()
-                return false
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: timeoutNanos)
-                if process.isRunning {
-                    process.terminate()
-                    return true
-                }
-                return false
-            }
-            let first = try await group.next() ?? false
-            group.cancelAll()
-            return first
+        let timeout = Duration.nanoseconds(Int64(max(config.hook.timeoutSeconds, 0.1) * 1_000_000_000))
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        let monitor = HookProcessMonitor()
+        process.terminationHandler = { _ in
+            Task { await monitor.resolve(.exited) }
         }
+        try process.run()
+        let timeoutTask = Task {
+            try await clock.sleep(until: deadline)
+            await monitor.resolve(process.isRunning ? .timedOut : .exited)
+        }
+        let outcome = await monitor.waitForOutcome()
+        timeoutTask.cancel()
 
-        if timedOut { throw HookRunnerError.timedOut }
+        if outcome == .timedOut {
+            process.terminate()
+            let terminationDeadline = clock.now.advanced(by: .milliseconds(100))
+            while process.isRunning, clock.now < terminationDeadline {
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+            if process.isRunning {
+                _ = kill(process.processIdentifier, SIGKILL)
+            }
+            throw HookRunnerError.timedOut
+        }
         guard process.terminationStatus == 0 else {
             throw HookRunnerError.unsuccessfulExit(process.terminationStatus)
         }

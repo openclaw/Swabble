@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed hook timeouts being reported as ordinary process exits when termination and process-wait completion raced.
 - Fixed installed and `swift run` CLI routing, added built-in command help, and restored documented option binding for custom config and transcript output paths.
 - Kept `test-hook` as an explicit wiring probe by bypassing daemon-only minimum-length and cooldown gating.
 - Enforced hook minimum length, cooldown, timeout, exit-status, and reserved-environment guardrails while preventing partial transcripts from recreating the cooldown state.

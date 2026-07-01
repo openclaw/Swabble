@@ -71,12 +71,36 @@ func hookRunnerProtectsReservedEnvironment() async throws {
 
 @Test
 func hookRunnerReportsTimeout() async {
+    // Exercise both scheduler orders around process termination.
+    for _ in 0..<10 {
+        var config = SwabbleConfig()
+        config.hook.command = "/bin/sh"
+        config.hook.args = ["-c", "while :; do :; done", "swabble-hook"]
+        config.hook.minCharacters = 0
+        config.hook.timeoutSeconds = 0.1
+        let runner = HookRunner(config: config)
+
+        do {
+            _ = try await runner.run(job: HookJob(text: "timeout", timestamp: Date()))
+            Issue.record("Expected hook timeout")
+        } catch let error as HookRunnerError {
+            #expect(error == .timedOut)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+}
+
+@Test
+func hookRunnerEscalatesWhenHookIgnoresTermination() async {
     var config = SwabbleConfig()
     config.hook.command = "/bin/sh"
-    config.hook.args = ["-c", "sleep 1", "swabble-hook"]
+    config.hook.args = ["-c", "trap '' TERM; while :; do :; done", "swabble-hook"]
     config.hook.minCharacters = 0
     config.hook.timeoutSeconds = 0.1
     let runner = HookRunner(config: config)
+    let clock = ContinuousClock()
+    let started = clock.now
 
     do {
         _ = try await runner.run(job: HookJob(text: "timeout", timestamp: Date()))
@@ -86,6 +110,7 @@ func hookRunnerReportsTimeout() async {
     } catch {
         Issue.record("Unexpected error: \(error)")
     }
+    #expect(started.duration(to: clock.now) < .seconds(1))
 }
 
 @Test
