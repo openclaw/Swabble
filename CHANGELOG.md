@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Restricted CI permissions and hardened docs table-of-contents generation against unsafe heading markup.
 - Pinned SwiftFormat 0.62.1 in CI and applied its conditional-body formatting rules.
 - Fixed hook timeouts being reported as ordinary process exits when termination and process-wait completion raced.
 - Fixed installed and `swift run` CLI routing, added built-in command help, and restored documented option binding for custom config and transcript output paths.

@@ -62,8 +62,9 @@ for (const section of nav) for (const page of section.pages) sectionByRel.set(pa
 const orderedPages = nav.flatMap((s) => s.pages);
 
 for (const page of pages) {
-  const html = markdownToHtml(page.markdown, page.rel);
-  const toc = tocFromHtml(html);
+  const headings = [];
+  const html = markdownToHtml(page.markdown, page.rel, headings);
+  const toc = renderToc(headings);
   const idx = orderedPages.findIndex((p) => p.rel === page.rel);
   const prev = idx > 0 ? orderedPages[idx - 1] : null;
   const next = idx >= 0 && idx < orderedPages.length - 1 ? orderedPages[idx + 1] : null;
@@ -210,7 +211,7 @@ function titleize(input) {
   return input.replaceAll("-", " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function markdownToHtml(markdown, currentRel) {
+function markdownToHtml(markdown, currentRel, headings = []) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const html = [];
   let paragraph = [];
@@ -220,7 +221,7 @@ function markdownToHtml(markdown, currentRel) {
 
   const flushParagraph = () => {
     if (!paragraph.length) return;
-    html.push(`<p>${inline(paragraph.join(" "), currentRel)}</p>`);
+    html.push(`<p>${inline(paragraph.join(" "), currentRel).html}</p>`);
     paragraph = [];
   };
   const closeList = () => {
@@ -230,7 +231,7 @@ function markdownToHtml(markdown, currentRel) {
   };
   const flushBlockquote = () => {
     if (!blockquote.length) return;
-    const inner = markdownToHtml(blockquote.join("\n"), currentRel);
+    const inner = markdownToHtml(blockquote.join("\n"), currentRel, headings);
     html.push(`<blockquote>${inner}</blockquote>`);
     blockquote = [];
   };
@@ -305,10 +306,11 @@ function markdownToHtml(markdown, currentRel) {
       const text = heading[2].trim();
       const id = slug(text);
       const inner = inline(text, currentRel);
+      if (level === 2 || level === 3) headings.push({ level, id, label: inner.text });
       if (level === 1) {
-        html.push(`<h1 id="${id}">${inner}</h1>`);
+        html.push(`<h1 id="${id}">${inner.html}</h1>`);
       } else {
-        html.push(`<h${level} id="${id}"><a class="anchor" href="#${id}" aria-label="Anchor link">#</a>${inner}</h${level}>`);
+        html.push(`<h${level} id="${id}"><a class="anchor" href="#${id}" aria-label="Anchor link">#</a>${inner.html}</h${level}>`);
       }
       continue;
     }
@@ -327,8 +329,8 @@ function markdownToHtml(markdown, currentRel) {
         i += 1;
         rows.push(splitRow(lines[i]));
       }
-      const th = header.map((c, idx) => `<th${aligns[idx] ? ` style="text-align:${aligns[idx]}"` : ""}>${inline(c, currentRel)}</th>`).join("");
-      const tb = rows.map((r) => `<tr>${r.map((c, idx) => `<td${aligns[idx] ? ` style="text-align:${aligns[idx]}"` : ""}>${inline(c, currentRel)}</td>`).join("")}</tr>`).join("");
+      const th = header.map((c, idx) => `<th${aligns[idx] ? ` style="text-align:${aligns[idx]}"` : ""}>${inline(c, currentRel).html}</th>`).join("");
+      const tb = rows.map((r) => `<tr>${r.map((c, idx) => `<td${aligns[idx] ? ` style="text-align:${aligns[idx]}"` : ""}>${inline(c, currentRel).html}</td>`).join("")}</tr>`).join("");
       html.push(`<table><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`);
       continue;
     }
@@ -342,7 +344,7 @@ function markdownToHtml(markdown, currentRel) {
         list = tag;
         html.push(`<${tag}>`);
       }
-      html.push(`<li>${inline((bullet || numbered)[1], currentRel)}</li>`);
+      html.push(`<li>${inline((bullet || numbered)[1], currentRel).html}</li>`);
       continue;
     }
     paragraph.push(line.trim());
@@ -355,19 +357,27 @@ function markdownToHtml(markdown, currentRel) {
 
 function inline(text, currentRel) {
   const stash = [];
-  let out = text.replace(/`([^`]+)`/g, (_, code) => {
-    stash.push(`<code>${escapeHtml(code)}</code>`);
+  const source = text.replace(/`([^`]+)`/g, (_, code) => {
+    stash.push({ html: `<code>${escapeHtml(code)}</code>`, text: code });
     return `\u0000${stash.length - 1}\u0000`;
   });
-  out = escapeHtml(out)
+  let html = escapeHtml(source)
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>")
     .replace(/(^|[^_])_([^_\s][^_]*?)_(?!_)/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => `<a href="${escapeAttr(rewriteHref(href, currentRel))}">${label}</a>`)
     .replace(/&lt;(https?:\/\/[^\s<>]+)&gt;/g, '<a href="$1">$1</a>');
-  out = out.replace(/\\\|/g, "|");
-  out = out.replace(/&lt;br&gt;/g, "<br>");
-  return out.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[Number(i)]);
+  html = html.replace(/\\\|/g, "|").replace(/&lt;br&gt;/g, "<br>");
+  const label = source
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1$2")
+    .replace(/(^|[^_])_([^_\s][^_]*?)_(?!_)/g, "$1$2")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/<(https?:\/\/[^\s<>]+)>/g, "$1")
+    .replace(/\\\|/g, "|")
+    .replace(/<br>/g, "");
+  const restore = (value, key) => value.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[Number(i)][key]);
+  return { html: restore(html, "html"), text: restore(label, "text") };
 }
 
 function rewriteHref(href, currentRel) {
@@ -392,20 +402,10 @@ function rewriteHref(href, currentRel) {
   return `${rewritten}${hash ? `#${hash}` : ""}`;
 }
 
-function tocFromHtml(html) {
-  const items = [];
-  const re = /<h([23]) id="([^"]+)">([\s\S]*?)<\/h[23]>/g;
-  let m;
-  while ((m = re.exec(html))) {
-    const text = m[3]
-      .replace(/<a class="anchor"[^>]*>.*?<\/a>/, "")
-      .replace(/<[^>]+>/g, "")
-      .trim();
-    items.push({ level: Number(m[1]), id: m[2], text });
-  }
+function renderToc(items) {
   if (items.length < 2) return "";
   return `<nav class="toc" aria-label="On this page"><h2>On this page</h2>${items
-    .map((i) => `<a class="toc-l${i.level}" href="#${i.id}">${escapeHtml(i.text)}</a>`)
+    .map((i) => `<a class="toc-l${i.level}" href="#${i.id}">${escapeHtml(i.label)}</a>`)
     .join("")}</nav>`;
 }
 
