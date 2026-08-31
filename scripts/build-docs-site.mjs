@@ -62,16 +62,15 @@ for (const section of nav) for (const page of section.pages) sectionByRel.set(pa
 const orderedPages = nav.flatMap((s) => s.pages);
 
 for (const page of pages) {
-  const headings = [];
-  const html = markdownToHtml(page.markdown, page.rel, headings);
-  const toc = renderToc(headings);
+  const rendered = renderMarkdown(page.markdown, page.rel);
+  const toc = renderToc(rendered.headings);
   const idx = orderedPages.findIndex((p) => p.rel === page.rel);
   const prev = idx > 0 ? orderedPages[idx - 1] : null;
   const next = idx >= 0 && idx < orderedPages.length - 1 ? orderedPages[idx + 1] : null;
   const sectionName = sectionByRel.get(page.rel) || "Reference";
   const pageOut = path.join(outDir, page.outRel);
   fs.mkdirSync(path.dirname(pageOut), { recursive: true });
-  fs.writeFileSync(pageOut, layout({ page, html, toc, prev, next, sectionName }), "utf8");
+  fs.writeFileSync(pageOut, layout({ page, html: rendered.html, toc, prev, next, sectionName }), "utf8");
 }
 
 fs.writeFileSync(path.join(outDir, "favicon.svg"), faviconSvg(), "utf8");
@@ -211,7 +210,15 @@ function titleize(input) {
   return input.replaceAll("-", " ").replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-function markdownToHtml(markdown, currentRel, headings = []) {
+function renderMarkdown(markdown, currentRel) {
+  const context = { headings: [], headingIds: new Set() };
+  return {
+    html: markdownToHtml(markdown, currentRel, context),
+    headings: context.headings,
+  };
+}
+
+function markdownToHtml(markdown, currentRel, context) {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const html = [];
   let paragraph = [];
@@ -231,7 +238,7 @@ function markdownToHtml(markdown, currentRel, headings = []) {
   };
   const flushBlockquote = () => {
     if (!blockquote.length) return;
-    const inner = markdownToHtml(blockquote.join("\n"), currentRel, headings);
+    const inner = markdownToHtml(blockquote.join("\n"), currentRel, context);
     html.push(`<blockquote>${inner}</blockquote>`);
     blockquote = [];
   };
@@ -304,9 +311,11 @@ function markdownToHtml(markdown, currentRel, headings = []) {
       closeList();
       const level = heading[1].length;
       const text = heading[2].trim();
-      const id = slug(text);
       const inner = inline(text, currentRel);
-      if (level === 2 || level === 3) headings.push({ level, id, label: inner.text });
+      const id = uniqueHeadingId(text, context.headingIds);
+      if (level === 2 || level === 3) {
+        context.headings.push({ level, id, label: inner.text });
+      }
       if (level === 1) {
         html.push(`<h1 id="${id}">${inner.html}</h1>`);
       } else {
@@ -578,6 +587,18 @@ function hrefToOutRel(targetOutRel, currentOutRel) {
 
 function slug(text) {
   return text.toLowerCase().replace(/`/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function uniqueHeadingId(text, usedIds) {
+  const base = slug(text) || "section";
+  let id = base;
+  let suffix = 2;
+  while (usedIds.has(id)) {
+    id = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedIds.add(id);
+  return id;
 }
 
 function escapeHtml(value) {

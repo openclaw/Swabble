@@ -7,9 +7,9 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const builder = path.join(repoRoot, "scripts", "build-docs-site.mjs");
+const builder = process.env.SWABBLE_DOCS_BUILDER || path.join(repoRoot, "scripts", "build-docs-site.mjs");
 
-test("builds exact plain-text labels from escaped heading facts", (t) => {
+function buildPage(t, body) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "swabble-docs-test-"));
   const docs = path.join(root, "docs");
   fs.mkdirSync(docs);
@@ -19,35 +19,78 @@ test("builds exact plain-text labels from escaped heading facts", (t) => {
   writeDoc("index.md", "# Home\n\nWelcome.\n");
   writeDoc("install.md", "# Install\n\nInstall locally.\n");
   writeDoc("quickstart.md", "# Quickstart\n\nStart locally.\n");
-  writeDoc(
-    "cli.md",
+  writeDoc("cli.md", body);
+
+  execFileSync(process.execPath, [builder], { cwd: root });
+  const first = fs.readFileSync(path.join(root, "dist", "docs-site", "cli.html"), "utf8");
+  execFileSync(process.execPath, [builder], { cwd: root });
+  const second = fs.readFileSync(path.join(root, "dist", "docs-site", "cli.html"), "utf8");
+
+  assert.equal(second, first);
+  return first;
+}
+
+test("escapes malicious heading text once in the TOC", (t) => {
+  const page = buildPage(
+    t,
     [
       "# CLI",
       "",
-      "## Normal behavior",
+      "## Safe",
       "",
-      "### Use `swabble` with **strong**, *emphasis*, and _underscores_",
-      "",
-      "## Read [the docs](https://example.com) or <https://example.com>",
-      "",
-      '### Nested <scr<script>ipt>alert("toc")</scr<script>ipt>',
+      '## <img src=x onerror=alert("toc")> <scr<script>ipt>alert("toc")</scr<script>ipt>',
       "",
     ].join("\n"),
   );
+  const toc = page.match(/<nav class="toc"[\s\S]*?<\/nav>/)?.[0];
 
-  execFileSync(process.execPath, [builder], { cwd: root });
-
-  const html = fs.readFileSync(path.join(root, "dist", "docs-site", "cli.html"), "utf8");
-  const toc = html.match(/<nav class="toc"[\s\S]*?<\/nav>/)?.[0];
   assert.equal(
     toc,
     '<nav class="toc" aria-label="On this page"><h2>On this page</h2>' +
-      '<a class="toc-l2" href="#normal-behavior">Normal behavior</a>' +
-      '<a class="toc-l3" href="#use-swabble-with-strong-emphasis-and-underscores">' +
-      "Use swabble with strong, emphasis, and underscores</a>" +
-      '<a class="toc-l2" href="#read-the-docs-https-example-com-or-https-example-com">' +
-      "Read the docs or https://example.com</a>" +
-      '<a class="toc-l3" href="#nested-scr-script-ipt-alert-toc-scr-script-ipt">' +
-      "Nested &lt;scr&lt;script&gt;ipt&gt;alert(&quot;toc&quot;)&lt;/scr&lt;script&gt;ipt&gt;</a></nav>",
+      '<a class="toc-l2" href="#safe">Safe</a>' +
+      '<a class="toc-l2" href="#img-src-x-onerror-alert-toc-scr-script-ipt-alert-toc-scr-script-ipt">' +
+      '&lt;img src=x onerror=alert(&quot;toc&quot;)&gt; ' +
+      '&lt;scr&lt;script&gt;ipt&gt;alert(&quot;toc&quot;)&lt;/scr&lt;script&gt;ipt&gt;</a></nav>',
+  );
+  assert.doesNotMatch(toc, /<img|<script/i);
+});
+
+test("renders deterministic TOC entries and unique heading anchors", (t) => {
+  const page = buildPage(
+    t,
+    [
+      "# CLI",
+      "",
+      "## Repeat",
+      "",
+      "### **Nested [label](https://example.com)** and `code`",
+      "",
+      "## Repeat",
+      "",
+      "## Repeat 2",
+      "",
+      "### Fish &amp; Chips",
+      "",
+    ].join("\n"),
+  );
+  const toc = page.match(/<nav class="toc"[\s\S]*?<\/nav>/)?.[0];
+
+  assert.equal(
+    toc,
+    '<nav class="toc" aria-label="On this page"><h2>On this page</h2>' +
+      '<a class="toc-l2" href="#repeat">Repeat</a>' +
+      '<a class="toc-l3" href="#nested-label-https-example-com-and-code">Nested label and code</a>' +
+      '<a class="toc-l2" href="#repeat-2">Repeat</a>' +
+      '<a class="toc-l2" href="#repeat-2-2">Repeat 2</a>' +
+      '<a class="toc-l3" href="#fish-amp-chips">Fish &amp;amp; Chips</a></nav>',
+  );
+
+  const headingIds = [...page.matchAll(/<h[23] id="([^"]+)"/g)].map((match) => match[1]);
+  const tocIds = [...toc.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(headingIds, tocIds);
+  assert.equal(new Set(headingIds).size, headingIds.length);
+  assert.match(
+    page,
+    /<h3 id="nested-label-https-example-com-and-code">[^<]*<a class="anchor"[^>]*>#<\/a><strong>Nested <a href="https:\/\/example\.com">label<\/a><\/strong> and <code>code<\/code><\/h3>/,
   );
 });
