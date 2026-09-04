@@ -98,20 +98,33 @@ public actor HookRunner {
         timeoutTask.cancel()
 
         if outcome == .timedOut {
-            process.terminate()
-            let terminationDeadline = clock.now.advanced(by: .milliseconds(100))
-            while process.isRunning, clock.now < terminationDeadline {
-                try? await Task.sleep(for: .milliseconds(10))
-            }
-            if process.isRunning {
-                _ = kill(process.processIdentifier, SIGKILL)
-            }
-            throw HookRunnerError.timedOut
+            try await finishTimedOutProcess(process, clock: clock)
         }
         guard process.terminationStatus == 0 else {
             throw HookRunnerError.unsuccessfulExit(process.terminationStatus)
         }
         lastRun = Date()
         return true
+    }
+
+    func finishTimedOutProcess(_ process: Process, clock: ContinuousClock) async throws {
+        process.terminate()
+        let terminationDeadline = clock.now.advanced(by: .milliseconds(100))
+        do {
+            while process.isRunning, clock.now < terminationDeadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+        } catch is CancellationError {
+            if process.isRunning {
+                _ = kill(process.processIdentifier, SIGKILL)
+            }
+            throw CancellationError()
+        }
+        if process.isRunning {
+            _ = kill(process.processIdentifier, SIGKILL)
+        }
+        // The process may exit without another suspension observing cancellation.
+        try Task.checkCancellation()
+        throw HookRunnerError.timedOut
     }
 }

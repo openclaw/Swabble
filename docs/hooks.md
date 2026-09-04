@@ -23,4 +23,6 @@ Swabble applies the configured cooldown, minimum character count, and timeout be
 
 The hook must exit successfully. Timeouts and nonzero exits are reported as errors. `SWABBLE_TEXT` and `SWABBLE_PREFIX` always describe the current invocation and cannot be overridden through `hook.env`.
 
+After a timeout, Swabble sends SIGTERM, allows up to 100 ms for the hook to exit, then sends SIGKILL if it is still running. Task cancellation observed during this cleanup kills any surviving hook and throws `CancellationError` instead of a timeout. Cancelling a library invocation before the timeout does not yet interrupt the initial process wait.
+
 `swabble test-hook` bypasses minimum-length and cooldown gating so short test phrases always exercise the configured command; daemon invocations still enforce both guardrails.
