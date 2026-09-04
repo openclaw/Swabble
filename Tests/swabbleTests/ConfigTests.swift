@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Testing
 @testable import Swabble
@@ -178,6 +179,86 @@ func hookRunnerEscalatesWhenHookIgnoresTermination() async {
         Issue.record("Unexpected error: \(error)")
     }
     #expect(started.duration(to: clock.now) < .seconds(1))
+}
+
+@Test
+func hookRunnerHonorsCancelDuringTerminateWait() async throws {
+    let pidURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".pid")
+    let terminatedURL = pidURL.appendingPathExtension("terminated")
+    defer {
+        try? FileManager.default.removeItem(at: pidURL)
+        try? FileManager.default.removeItem(at: terminatedURL)
+    }
+
+    var config = SwabbleConfig()
+    config.hook.command = "/bin/sh"
+    config.hook.args = [
+        "-c",
+        "trap 'echo terminated > \"\(terminatedURL.path)\"' TERM; echo $$ > '\(pidURL.path)'; while :; do :; done",
+        "swabble-hook",
+    ]
+    config.hook.minCharacters = 0
+    config.hook.timeoutSeconds = 0.1
+    let runner = HookRunner(config: config)
+
+    let task = Task {
+        try await runner.run(job: HookJob(text: "timeout", timestamp: Date()))
+    }
+
+    let started = ContinuousClock().now
+    while !FileManager.default.fileExists(atPath: terminatedURL.path) {
+        if started.duration(to: .now) > .seconds(1) {
+            Issue.record("Hook did not receive SIGTERM")
+            task.cancel()
+            _ = try? await task.value
+            return
+        }
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    task.cancel()
+
+    do {
+        _ = try await task.value
+        Issue.record("Expected cancellation")
+    } catch is CancellationError {
+    } catch {
+        Issue.record("Unexpected error: \(error)")
+    }
+
+    let pidText = try String(contentsOf: pidURL, encoding: .utf8)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let pid = try #require(Int32(pidText))
+    var stillAlive = true
+    for _ in 0..<20 {
+        if kill(pid, 0) != 0 {
+            stillAlive = false
+            break
+        }
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(!stillAlive)
+}
+
+@Test
+func hookRunnerHonorsCancelWhenTerminationPollingIsSkipped() async throws {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/true")
+    try process.run()
+    process.waitUntilExit()
+    let runner = HookRunner(config: SwabbleConfig())
+
+    let task = Task {
+        withUnsafeCurrentTask { $0?.cancel() }
+        // An exited child skips every polling sleep, so cleanup must check cancellation itself.
+        try await runner.finishTimedOutProcess(process, clock: ContinuousClock())
+    }
+    do {
+        try await task.value
+        Issue.record("Expected cancellation")
+    } catch is CancellationError {
+    } catch {
+        Issue.record("Unexpected error: \(error)")
+    }
 }
 
 @Test
