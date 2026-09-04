@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- Updated the pinned Pages deployment action to 5.0.1 for bounded deployment-status polling with backoff and jitter.
 - Stopped `swabble serve` from replacing an existing unreadable config with defaults. Only a missing file is treated as first-run. (#10, thanks @SebTardif)
 - Surfaced launchd plist removal errors from `service uninstall` instead of printing bootout after a failed delete. (#9, thanks @SebTardif)
 - Updated Commander to 0.2.4, moved the docs build to Node 26, and refreshed the pinned checkout and Node setup actions.
+- Updated the pinned Pages deployment action to 5.0.1 for bounded deployment-status polling with backoff and jitter.
 - Pinned SwiftFormat 0.62.1 in CI and applied its conditional-body formatting rules.
 - Fixed hook timeouts being reported as ordinary process exits when termination and process-wait completion raced.
 - Fixed installed and `swift run` CLI routing, added built-in command help, and restored documented option binding for custom config and transcript output paths.
