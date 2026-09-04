@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Updated the pinned Pages deployment action to 5.0.1 for bounded deployment-status polling with backoff and jitter.
 - Stopped `swabble serve` from replacing an existing unreadable config with defaults. Only a missing file is treated as first-run. (#10, thanks @SebTardif)
 - Surfaced launchd plist removal errors from `service uninstall` instead of printing bootout after a failed delete. (#9, thanks @SebTardif)
 - Updated Commander to 0.2.4, moved the docs build to Node 26, and refreshed the pinned checkout and Node setup actions.
