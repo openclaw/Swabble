@@ -75,6 +75,17 @@ for architecture in "${architectures[@]}"; do
     exit 1
   fi
 
+  entitlements="$plist_dir/$architecture-entitlements.plist"
+  "$CODESIGN_BIN" -d --xml --arch "$architecture" --entitlements "$entitlements" "$BINARY"
+  python3 - "$entitlements" <<'PYTHON'
+import plistlib
+import sys
+with open(sys.argv[1], "rb") as handle:
+    entitlements = plistlib.load(handle)
+if entitlements != {"com.apple.security.device.audio-input": True}:
+    raise SystemExit("Unexpected release entitlements; microphone access must be enabled")
+PYTHON
+
   minimum_os="$("$OTOOL_BIN" -arch "$architecture" -l "$BINARY" | awk ' $1 == "minos" {print $2} ')"
   [[ "$minimum_os" == "26.0" ]] || { echo "Unexpected $architecture minimum macOS: $minimum_os" >&2; exit 1; }
 

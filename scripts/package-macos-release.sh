@@ -59,6 +59,7 @@ SKIP_VERSION_SYNC=1 "$BUILD_SCRIPT" "$stage/swabble"
 
 "$CODESIGN_BIN" --force --timestamp --options runtime \
   --identifier "$RELEASE_IDENTIFIER" \
+  --entitlements "$ROOT/Resources/swabble.entitlements" \
   --sign "$CODESIGN_IDENTITY" \
   "$stage/swabble"
 "$CODESIGN_BIN" --verify --strict --verbose=2 "$stage/swabble"

@@ -46,7 +46,7 @@ Use the shared `release-mac-app` helper's managed-keychain `codesign-run` wrappe
   scripts/package-macos-release.sh v0.1.0
 ```
 
-The packager requires clean main at the live remote head and a locally verified signed tag that matches the remote tag object. It builds both architectures, embeds the version and privacy usage descriptions, combines the binary before signing, submits the exact ZIP for notarization, and requires Accepted. It then verifies both signatures and online tickets, native `--version`, minimum macOS, checksum, archive contents, and source/tag stability. Outputs appear atomically in `dist/release-v0.1.0`.
+The packager requires clean main at the live remote head and a locally verified signed tag that matches the remote tag object. It builds both architectures, embeds the version and privacy usage descriptions, combines the binary before signing with Hardened Runtime and the audio-input entitlement, submits the exact ZIP for notarization, and requires Accepted. It then verifies both signatures and online tickets, native `--version`, minimum macOS, checksum, archive contents, and source/tag stability. Outputs appear atomically in `dist/release-v0.1.0`.
 
 ## Draft, verify, publish
 
@@ -54,7 +54,7 @@ The packager requires clean main at the live remote head and a locally verified 
 scripts/create-release-draft.sh v0.1.0
 ```
 
-This rechecks the local assets, creates a draft with exactly the finalized changelog body and three assets, and dispatches the verification workflow from main. Wait for that exact run to succeed. The workflow uses a native Apple Silicon `macos-26` runner: both slices get signature and notarization checks; `--version` runs natively on arm64. Intel execution is not established by this workflow.
+This rechecks the local assets, creates a draft with exactly the finalized changelog body and three assets, and dispatches the verification workflow from main. Wait for that exact run to succeed. The workflow uses a native Apple Silicon `macos-26` runner: both slices get signature, audio-input entitlement, and notarization checks; `--version` runs natively on arm64. Intel execution is not established by this workflow.
 
 ```bash
 scripts/publish-release.sh v0.1.0
