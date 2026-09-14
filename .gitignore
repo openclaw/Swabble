@@ -32,3 +32,7 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Local release configuration
+.mac-release.env
+__pycache__/

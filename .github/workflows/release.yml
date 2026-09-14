@@ -1,0 +1,110 @@
+name: release verification
+run-name: verify ${{ inputs.draft && 'draft' || 'published' }} ${{ inputs.tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify (for example v0.1.0)"
+        required: true
+        type: string
+      draft:
+        description: "Verify a draft release"
+        required: true
+        default: true
+        type: boolean
+
+# Draft releases require write-visible contents access. The token is exposed only
+# to the download step and is explicitly absent during verification/execution.
+permissions:
+  contents: write
+
+jobs:
+  verify-native-release:
+    name: native-${{ matrix.host_arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            host_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - name: Require protected default-branch workflow
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          expected="$REPOSITORY/.github/workflows/release.yml@refs/heads/$DEFAULT_BRANCH"
+          if [[ "$WORKFLOW_REF" != "$expected" ]]; then
+            echo "::error::Verifier must run from protected workflow ref $expected"
+            exit 1
+          fi
+          if [[ "$EVENT_NAME" != "workflow_dispatch" ]]; then
+            echo "::error::Verifier only accepts an explicit protected workflow dispatch"
+            exit 1
+          fi
+          if [[ "$EVENT_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+            echo "::error::Manual verification must target $DEFAULT_BRANCH"
+            exit 1
+          fi
+
+      - name: Check out trusted verifier revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.workflow_sha }}
+
+      - name: Require native host architecture
+        shell: bash
+        env:
+          EXPECTED_HOST_ARCH: ${{ matrix.host_arch }}
+        run: |
+          actual="$(uname -m)"
+          if [[ "$actual" != "$EXPECTED_HOST_ARCH" ]]; then
+            echo "::error::Expected native $EXPECTED_HOST_ARCH host; found $actual"
+            exit 1
+          fi
+
+      - name: Resolve requested release
+        id: release
+        shell: bash
+        env:
+          INPUT_DRAFT: ${{ inputs.draft }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="$INPUT_TAG"
+          if [[ "$INPUT_DRAFT" == "true" ]]; then
+            state="draft"
+          else
+            state="published"
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid release tag: $tag"
+            exit 1
+          fi
+          printf 'tag=%s\nstate=%s\n' "$tag" "$state" >>"$GITHUB_OUTPUT"
+
+      - name: Download exact release asset inventory
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRE_GH_TOKEN: 1
+          RELEASE_STATE: ${{ steps.release.outputs.state }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          TRUSTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: scripts/download-release-assets.sh "$RELEASE_TAG" "$RELEASE_STATE" "$RUNNER_TEMP/swabble-download"
+
+      - name: Verify native artifact without draft token
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          SOURCE_PROOF_FILE: ${{ runner.temp }}/swabble-download/source-proof.json
+        run: |
+          env -u GH_TOKEN -u GITHUB_TOKEN -u HOMEBREW_GITHUB_API_TOKEN \
+            -u ACTIONS_RUNTIME_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            scripts/verify-macos-release.sh "$RELEASE_TAG" "$RUNNER_TEMP/swabble-download/assets"

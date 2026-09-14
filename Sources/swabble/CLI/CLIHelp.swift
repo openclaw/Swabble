@@ -57,6 +57,9 @@ enum CLIHelp {
         }
         sections += ["", "Options:"]
         sections += options + flags + ["  -h, --help\tShow help"]
+        if path == ["swabble"] {
+            sections.append("  --version\tShow version")
+        }
         return sections.joined(separator: "\n")
     }
 

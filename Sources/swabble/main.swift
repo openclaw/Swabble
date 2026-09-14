@@ -6,6 +6,10 @@ private func runCLI() async -> Int32 {
     do {
         let descriptors = CLIRegistry.descriptors
         let rawArguments = Array(CommandLine.arguments.dropFirst())
+        if rawArguments == ["--version"] {
+            print(SwabbleVersion.current)
+            return 0
+        }
         if let help = CLIHelp.render(arguments: rawArguments, descriptors: descriptors) {
             print(help)
             return 0

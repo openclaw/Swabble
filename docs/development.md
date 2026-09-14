@@ -38,3 +38,7 @@ swift build -c release
 ```
 
 CI runs on `macos-26`, runs the docs-builder regression tests with Node 26, selects Xcode 26, installs SwiftFormat and SwiftLint, then runs formatting, linting, Swift tests, a release build, and CLI smoke checks.
+
+## Releases
+
+See [Releasing](releasing.html) for the local signing and notarization workflow.

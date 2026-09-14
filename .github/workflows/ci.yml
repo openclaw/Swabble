@@ -74,6 +74,11 @@ jobs:
       - name: Lint
         run: ./scripts/lint.sh
 
+      - name: Test release metadata
+        run: |
+          python3 -m unittest discover -s scripts -p "test_release.py"
+          ./scripts/check-release.sh
+
       - name: Test
         run: swift test --parallel
 
@@ -84,6 +89,7 @@ jobs:
           smoke_dir="$RUNNER_TEMP/swabble-smoke"
           config="$smoke_dir/config.json"
           binary=".build/release/swabble"
+          test "$("$binary" --version)" = "$(python3 scripts/release.py version)"
           test "$("$binary" health)" = "ok"
           test "$("$binary" health --json)" = '{"status":"ok"}'
           "$binary" setup --config "$config"

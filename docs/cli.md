@@ -31,3 +31,5 @@ swift run swabble doctor
 swift run swabble mic list
 swift run swabble status --json-output
 ```
+
+`swabble --version` prints the installed release version without loading config or requesting speech access.

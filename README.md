@@ -13,6 +13,10 @@ swabble is a Swift 6.2, macOS 26-only rewrite of the brabble voice daemon. It li
 - **Services**: launchd helper stubs for start/stop/install.
 - **File transcribe**: TXT or SRT with time ranges (using AttributedString splits).
 
+## Install
+
+Download the signed and notarized universal binary from [GitHub Releases](https://github.com/openclaw/Swabble/releases/latest), or [build from source](https://swabble.ai/install.html). Requires macOS 26. Run `swabble --version` to check the installed version.
+
 ## Quick start
 ```bash
 # Install deps
@@ -43,7 +47,7 @@ Add swabble as a SwiftPM dependency and import the `Swabble` product to reuse th
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/openclaw/swabble.git", branch: "main"),
+    .package(url: "https://github.com/openclaw/swabble.git", from: "0.1.0"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [.product(name: "Swabble", package: "swabble")]),
