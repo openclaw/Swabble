@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stored an absolute executable path in the launchd agent for bare and relative invocations while preserving stable symlinks across upgrades. (#15, thanks @SebTardif)
+
 ## 0.1.1 - 2026-10-06
 
 **Highlights:** Updates Commander to 0.3.0, keeping Swabble on the same command-line parser as Peekaboo 4.9 and OpenClaw.

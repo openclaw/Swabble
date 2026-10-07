@@ -103,3 +103,4 @@ jobs:
           plutil -replace hook.command -string /usr/bin/true "$config"
           "$binary" test-hook hi --config "$config" | grep -q '^hook invoked$'
           "$binary" --help | grep -q '^Usage: swabble <command>$'
+          python3 scripts/test-service-install.py "$binary"
