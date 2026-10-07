@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Stored an absolute executable path in the launchd agent for bare and relative invocations while preserving stable symlinks across upgrades. (#15, thanks @SebTardif)
+- Updated the pinned CI formatter to SwiftFormat 0.63.1.
 
 ## 0.1.1 - 2026-10-06
 
