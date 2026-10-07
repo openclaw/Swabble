@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-10-06
+
+**Highlights:** Updates Commander to 0.3.0, keeping Swabble on the same command-line parser as Peekaboo 4.9 and OpenClaw.
+
+- Updated Commander to 0.3.0, whose parser fails closed on ambiguous or malformed invocations and requires non-optional options.
+- Kept `swabble` commands routable under Commander 0.3.0 by resolving the argument tail from the `swabble` root command; the previous full-argv resolution would have reported every command as unknown.
 
 ## 0.1.0 - 2026-09-14
 

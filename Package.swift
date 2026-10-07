@@ -11,7 +11,7 @@ let package = Package(
         .executable(name: "swabble", targets: ["SwabbleCLI"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/steipete/Commander.git", from: "0.2.4"),
+        .package(url: "https://github.com/steipete/Commander.git", from: "0.3.0"),
     ],
     targets: [
         .target(

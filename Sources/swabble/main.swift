@@ -15,10 +15,9 @@ private func runCLI() async -> Int32 {
             return 0
         }
         let program = Program(descriptors: descriptors)
-        // Commander resolves the root command as argv[0], while the OS provides
-        // the executable path there. Keep routing independent of install path.
-        let arguments = ["swabble"] + rawArguments
-        let invocation = try program.resolve(argv: arguments)
+        // The OS supplies the executable path as argv[0]; route the remaining tail
+        // from the `swabble` root command so routing is independent of install path.
+        let invocation = try program.resolve(arguments: ["swabble"] + rawArguments)
         try await dispatch(invocation: invocation)
         return 0
     } catch {
