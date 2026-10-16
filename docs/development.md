@@ -44,4 +44,4 @@ The service smoke check uses a temporary LaunchAgents directory and synthetic ve
 
 ## Releases
 
-See [Releasing](releasing.html) for the local signing and notarization workflow.
+See [Releasing](releasing.html) for the GitHub Actions signing, notarization, and publication workflow.
