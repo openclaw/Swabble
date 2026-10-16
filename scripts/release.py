@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Version metadata and changelog extraction for the local release scripts."""
+"""Version metadata and changelog extraction for release preparation and CI."""
 import argparse
 from pathlib import Path
 import plistlib

@@ -1,71 +1,47 @@
 ---
 title: Releasing
-description: "Build, sign, notarize, and verify a Swabble release locally."
+description: "Build, sign, notarize and publish Swabble through GitHub Actions."
 ---
 
 # Releasing
 
-Official Swabble releases use the local release path adapted from `openclaw/remindctl`. GitHub Actions only downloads and verifies an existing draft or published release. It does not build, sign, notarize, publish, or update Homebrew, and needs no repository signing secrets.
+`.github/workflows/release.yml` owns official releases. It builds the universal macOS CLI, signs with **OpenClaw Foundation (FWJYW4S8P8)**, notarizes the exact ZIP, verifies the retained assets on fresh runners, and then publishes GitHub Releases. Local scripts do not publish or sign official releases.
 
-## Identity and artifacts
+The shared `release-swift-cli.yml@v1` currently requires an imsg companion dylib and Linux archive and has no dry-run input. This project ships neither, so its self-contained workflow preserves the existing macOS-only distribution contract. There is no npm package or Sparkle feed.
 
-- Version source: `Sources/swabble/Version.swift`. The CLI and release-generated embedded Info.plist use this value.
-- Repository: `openclaw/Swabble`.
-- Signing identifier: `com.steipete.swabble`.
-- Developer ID: `Developer ID Application: OpenClaw Foundation (FWJYW4S8P8)`.
-- Architectures: `arm64 x86_64`; minimum macOS: 26.0.
-- Assets: `swabble-macos.zip`, `SHA256SUMS`, and `release-inventory.json`.
+## Prepare a release
 
-The inventory binds the ZIP checksum and size to the exact source commit and signed annotated tag object. The ZIP contains only the universal `swabble` executable. Apple does not support stapling a standalone Mach-O executable or ZIP. Each slice's online notarization constraint is verified with `codesign --check-notarization -R=notarized` instead.
+Finalize one dated `## X.Y.Z - YYYY-MM-DD` section in `CHANGELOG.md`, preserving contributor credit. Synchronize `Sources/swabble/Version.swift` and versioned documentation. Land the preparation PR and wait for successful **push CI on that exact main commit**.
 
-## Prepare and land
+Only after release authorization, push a signed annotated `vX.Y.Z` tag at a commit reachable from protected main. The signature must verify against `.github/release-allowed-signers`. The pipeline never creates or moves tags and refuses any existing GitHub Release, including a draft. After a partial publish failure, inspect and resolve the existing draft explicitly; a rerun cannot overwrite it.
 
-Update `Version.swift`, finalize the changelog's dated release section without dropping contributor credits, and update versioned install and SwiftPM snippets. Keep the CLI, embedded metadata, tag, and changelog versions consistent.
+## Rehearse without publishing
 
-```bash
-./scripts/format.sh
-./scripts/lint.sh
-swift test --parallel
-swift build -c release
-.build/release/swabble --version
-.build/release/swabble health
-node --test scripts/build-docs-site.test.mjs
-node scripts/build-docs-site.mjs
-python3 -m unittest discover -s scripts -p 'test_release.py'
-./scripts/check-release.sh v0.1.0
+Run from protected main after its push CI is green:
+
+```sh
+gh workflow run release.yml --repo openclaw/Swabble --ref main \
+  -f version=0.1.1 -F dry_run=true
 ```
 
-Use Node 26 for docs checks. Run independent review, land the preparation PR, and require green CI on the exact main commit before tagging. Recheck the live release list and remote tags immediately before making a new tag; stop if that version exists. Use an annotated signed tag, verify it locally and on GitHub, and push only after the release is authorized.
+Dispatch defaults to `dry_run: true`; a live dispatch is refused. Rehearsals use the exact current main commit even when the version already has a tag. They validate the dated notes and metadata, build both architectures, import an ephemeral signing keychain, sign and notarize, check the exact archive/inventory/checksum, and run native CLI smoke tests. They upload only Actions artifacts and never create tags, drafts, releases, or Homebrew changes. Notarization does submit the candidate ZIP to Apple.
 
-## Local packaging
+The signer never checks out or executes source. Build and verification jobs receive no signing secrets or release-write token. Artifact IDs bind source proof, raw binaries, and signed outputs within the run. Publication checks every retained asset against the verifier digest records, redownloads the draft, compares all bytes, and only then makes it public. Signing keychains and App Store Connect files are removed even after failure.
 
-Use the shared `release-mac-app` helper's managed-keychain `codesign-run` wrapper with the approved runtime keychain and `NOTARYTOOL_PROFILE`. `.mac-release.env.example` documents the non-secret identity settings; keep credentials and machine-specific locators out of the repository. If another release holds the helper's keychain lock, wait for it; never bypass the lock.
+## Channels and verification
 
-```bash
-/path/to/release-mac-app/scripts/mac-release codesign-run -- \
-  scripts/package-macos-release.sh v0.1.0
-```
+The GitHub release contains `swabble-macos.zip`, `SHA256SUMS`, and `release-inventory.json`. The ZIP contains only `swabble`. Inventory schema 2 records the exact source commit, tag object (null for dry runs), dry-run status, architectures, stable identifier `com.steipete.swabble`, Foundation team, ZIP size, and SHA-256.
 
-The packager requires clean main at the live remote head and a locally verified signed tag that matches the remote tag object. It builds both architectures, embeds the version and privacy usage descriptions, combines the binary before signing with Hardened Runtime and the audio-input entitlement, submits the exact ZIP for notarization, and requires Accepted. It then verifies both signatures and online tickets, native `--version`, minimum macOS, checksum, archive contents, and source/tag stability. Outputs appear atomically in `dist/release-v0.1.0`.
+Both architecture slices must pass strict signature, identity, hardened-runtime, secure-timestamp, embedded version, and online notarization checks. The microphone entitlement and macOS 26 deployment target are checked. A macos-26 arm64 runner executes the CLI; Intel execution is not claimed because no macOS 26 Intel hosted runner is configured. Standalone Mach-O files cannot be stapled; online `codesign --check-notarization -R=notarized` is the ticket check. CLI version/help smoke does not request microphone or Speech permissions.
 
-## Draft, verify, publish
+There is no Homebrew formula to update.
 
-```bash
-scripts/create-release-draft.sh v0.1.0
-```
+Host tests do not replace a natural-download Gatekeeper and real microphone/Speech permission check.
 
-This rechecks the local assets, creates a draft with exactly the finalized changelog body and three assets, and dispatches the verification workflow from main. Wait for that exact run to succeed. The workflow uses a native Apple Silicon `macos-26` runner: both slices get signature, audio-input entitlement, and notarization checks; `--version` runs natively on arm64. Intel execution is not established by this workflow.
+## Repository secrets
 
-```bash
-scripts/publish-release.sh v0.1.0
-```
+Set `MACOS_SIGNING_P12`, `MACOS_SIGNING_P12_PASSWORD`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_PRIVATE_KEY_P8` from the release credentials in Molty. No tap credential is needed. Never commit private signing keys or credential locators. `.github/release-allowed-signers` contains only the public tag-signing key.
 
-Publication downloads and verifies the draft again, checks its source proof against the local signed tag, and compares release metadata immediately before publishing. It then dispatches published verification. Wait for that exact run to pass before closeout. The verifier intentionally binds to the release commit at the current main head; complete it before reopening Unreleased.
+Keep local read-only metadata, artifact, and historical-release verification helpers for diagnosis. `scripts/verify-ci-release.py` verifies schema-2 retained CI assets with the expected SHA, tag, dry-run status, and runner architecture supplied by the workflow. Existing `verify-macos-release.sh` and download helpers remain readers for historical schema-1 releases.
 
-## Download proof and closeout
-
-Freshly download the published assets with curl, verify `SHA256SUMS`, and inspect `xattr -l`. Curl may not attach `com.apple.quarantine`, even with `--xattr`; report that honestly. An explicitly applied quarantine attribute may be used for an authorized host test, but is not evidence of a natural browser download.
-
-Verify the extracted binary with `codesign --verify --deep --strict --verbose=4`, `spctl -a -vv -t open --context context:primary-signature`, the per-slice online notarization constraint, `--version`, and the read-only `health` command. Check both `LC_BUILD_VERSION` values are 26.0. Record exact outputs and distinguish host verification from clean-VM testing.
-
-The first release does not update Homebrew. After published verification, open an empty `## Unreleased` section, review and land the closeout, leave main clean at origin/main, and remove task build outputs and credential windows.
+After a successful authorized release, compare GitHub notes and checksums with the finalized changelog, then open the next `Unreleased` section in a separate reviewed change. Infrastructure migrations do not add product changelog entries.
