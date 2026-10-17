@@ -74,12 +74,8 @@ jobs:
       - name: Lint
         run: ./scripts/lint.sh
 
-      - name: Test release keychain lifecycle
-        run: python3 scripts/test-release-keychain.py
-      - name: Test native release architecture gate
-        run: scripts/test-release-architecture.sh
-      - name: Test CI release source validation
-        run: node --test scripts/release-source.test.cjs
+      - name: Test shared release caller
+        run: python3 scripts/test-release-caller.py
       - name: Test release metadata
         run: |
           python3 -m unittest discover -s scripts -p "test_release.py"

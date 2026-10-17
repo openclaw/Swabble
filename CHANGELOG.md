@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use the shared Swift CLI release workflow for macOS-only signed releases and no-publish rehearsals, replacing the duplicated release pipeline.
+
 - Stored an absolute executable path in the launchd agent for bare and relative invocations while preserving stable symlinks across upgrades. (#15, thanks @SebTardif)
 - Updated the pinned CI formatter to SwiftFormat 0.63.1.
 
