@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Build and verify CI and release artifacts with Xcode 27 on macOS 27, retaining the macOS 26 minimum and verifying the x86_64 release under Rosetta.
+
 - Use the shared Swift CLI release workflow for macOS-only signed releases and no-publish rehearsals, replacing the duplicated release pipeline.
 
 - Stored an absolute executable path in the launchd agent for bare and relative invocations while preserving stable symlinks across upgrades. (#15, thanks @SebTardif)
