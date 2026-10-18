@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   build-and-test:
-    runs-on: macos-26
+    runs-on: xcode-27
     env:
+      MACOSX_DEPLOYMENT_TARGET: '26.0'
       SWIFTFORMAT_VERSION: "0.63.1"
       SWIFTFORMAT_SHA256: "385ef1a263ba28685157b98c5536b9c9105e124518f28b7ef8a2bee4b167eaeb"
     defaults:
@@ -32,21 +33,11 @@ jobs:
       - name: Test docs builder
         run: node --test scripts/build-docs-site.test.mjs
 
-      - name: Select Xcode 26.1 (prefer 26.1.1)
+      - name: Verify Xcode 27
         run: |
           set -euo pipefail
-          # pick the newest installed 26.1.x, fallback to newest 26.x
-          CANDIDATE="$(ls -d /Applications/Xcode_26.1*.app 2>/dev/null | sort -V | tail -1 || true)"
-          if [[ -z "$CANDIDATE" ]]; then
-            CANDIDATE="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
-          fi
-          if [[ -z "$CANDIDATE" ]]; then
-            echo "No Xcode 26.x found on runner" >&2
-            exit 1
-          fi
-          echo "Selecting $CANDIDATE"
-          sudo xcode-select -s "$CANDIDATE"
           xcodebuild -version
+          [[ "$(xcodebuild -version | head -n 1)" == 'Xcode 27'* ]]
 
       - name: Show Swift version
         run: swift --version

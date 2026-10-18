@@ -28,6 +28,9 @@ class ReleaseCallerTests(unittest.TestCase):
         self.assertEqual(CALLER['with']['repository-type'], 'openclaw')
         self.assertEqual(CALLER['with']['binary-identifier'], 'com.steipete.' + BINARY)
         self.assertEqual(CALLER['with']['macos-archive-name'], BINARY + '-macos.zip')
+        self.assertEqual(CALLER['with']['macos-runner'], 'xcode-27')
+        self.assertEqual(CALLER['with']['verify-arm64-runner'], 'xcode-27')
+        self.assertEqual(CALLER['with']['minimum-macos-version'], 26)
         self.assertTrue(WORKFLOW['true']['workflow_dispatch']['inputs']['dry_run']['default'])
         self.assertEqual(CALLER['needs'], 'policy')
         for obsolete in ['release-source.cjs', 'release-source.test.cjs', 'verify-ci-release.py',
@@ -54,17 +57,21 @@ class ReleaseCallerTests(unittest.TestCase):
             (root / 'tools').mkdir()
             shutil.copy(ROOT / 'scripts/build-release.sh', root / 'scripts/build-release.sh')
             builder = root / 'scripts/build-macos-universal.sh'
-            builder.write_text('#!/bin/bash\nset -eu\nprintf "synthetic" > "$1"\n')
+            builder.write_text('#!/bin/bash\nset -eu\n[[ "$MACOSX_DEPLOYMENT_TARGET" == 26.0 ]]\nprintf "synthetic" > "$1"\n')
             builder.chmod(0o755)
-            find = root / 'tools/find'
-            find.write_text('#!/bin/bash\necho /Applications/Xcode_26.6.app\n')
-            find.chmod(0o755)
+            xcode = root / 'tools/xcodebuild'
+            xcode.write_text('#!/bin/bash\necho "Xcode ${TEST_XCODE_VERSION:-27.0}"\n')
+            xcode.chmod(0o755)
             output = root / 'output with spaces'
             subprocess.run([str(root / 'scripts/build-release.sh')], check=True,
                            env=dict(os.environ, OUTPUT_DIR=str(output), PATH=str(root / 'tools') + ':' + os.environ['PATH']))
             binary = output / BINARY
             self.assertEqual(binary.read_text(), 'synthetic')
             self.assertTrue(os.access(binary, os.X_OK))
+            result = subprocess.run([str(root / 'scripts/build-release.sh')], capture_output=True,
+                                    env=dict(os.environ, OUTPUT_DIR=str(output), TEST_XCODE_VERSION='26.0',
+                                             PATH=str(root / 'tools') + ':' + os.environ['PATH']))
+            self.assertNotEqual(result.returncode, 0)
 
 
 if __name__ == '__main__':
