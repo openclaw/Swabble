@@ -13,8 +13,6 @@ jobs:
     runs-on: xcode-27
     env:
       MACOSX_DEPLOYMENT_TARGET: '26.0'
-      SWIFTFORMAT_VERSION: "0.63.1"
-      SWIFTFORMAT_SHA256: "385ef1a263ba28685157b98c5536b9c9105e124518f28b7ef8a2bee4b167eaeb"
     defaults:
       run:
         shell: bash
@@ -42,23 +40,13 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
-      - name: Install tooling
+      - name: Install pinned linters
         run: |
-          set -euo pipefail
-          brew update
-          brew install swiftlint
-          curl --fail --location --retry 3 \
-            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat.zip" \
-            --output "$RUNNER_TEMP/swiftformat.zip"
-          echo "${SWIFTFORMAT_SHA256}  $RUNNER_TEMP/swiftformat.zip" | shasum -a 256 --check
-          mkdir -p "$RUNNER_TEMP/swiftformat-bin"
-          ditto -x -k "$RUNNER_TEMP/swiftformat.zip" "$RUNNER_TEMP/swiftformat-bin"
-          chmod +x "$RUNNER_TEMP/swiftformat-bin/swiftformat"
-          echo "$RUNNER_TEMP/swiftformat-bin" >> "$GITHUB_PATH"
+          bash scripts/install-linters.sh "$RUNNER_TEMP/swabble-linters"
+          echo "$RUNNER_TEMP/swabble-linters" >> "$GITHUB_PATH"
 
       - name: Format check
         run: |
-          test "$(swiftformat --version)" = "$SWIFTFORMAT_VERSION"
           ./scripts/format.sh
           git diff --exit-code
 

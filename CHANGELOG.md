@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pin CI and local lint tooling to checksum-verified SwiftFormat 0.63.1 and SwiftLint 0.65.1 so upstream rule changes cannot break unchanged code.
+
 - Build and verify CI and release artifacts with Xcode 27 on macOS 27, retaining the macOS 26 minimum and verifying the x86_64 release under Rosetta.
 
 - Use the shared Swift CLI release workflow for macOS-only signed releases and no-publish rehearsals, replacing the duplicated release pipeline.
