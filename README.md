@@ -20,7 +20,8 @@ Download the signed and notarized universal binary from [GitHub Releases](https:
 ## Quick start
 ```bash
 # Install deps
-brew install swiftformat swiftlint
+bash scripts/install-linters.sh
+export PATH="$PWD/.build/linters:$PATH"
 
 # Build
 swift build
@@ -111,8 +112,10 @@ Environment variables:
 - Authorization requested at first start; requires macOS 26 + new Speech.framework APIs.
 
 ## Development
-- Format: `./scripts/format.sh` (uses ../peekaboo/.swiftformat if present)
-- Lint: `./scripts/lint.sh` (uses ../peekaboo/.swiftlint.yml if present)
+Install the same checksum-verified SwiftFormat 0.63.1 and SwiftLint 0.65.1 used by CI with `bash scripts/install-linters.sh`, then add `$PWD/.build/linters` to `PATH`. Versions and archive checksums live in that script; update them together after checking both lint configurations.
+
+- Format: `./scripts/format.sh` (uses this repository's `.swiftformat`)
+- Lint: `./scripts/lint.sh` (uses this repository's `.swiftlint.yml`)
 - Tests: `swift test` (uses swift-testing package)
 
 ## Roadmap
