@@ -10,7 +10,7 @@ Swabble exposes the `Swabble` product for apps that want the Speech pipeline, co
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/openclaw/swabble.git", from: "0.1.1"),
+    .package(url: "https://github.com/openclaw/swabble.git", from: "0.1.2"),
 ],
 targets: [
     .target(
