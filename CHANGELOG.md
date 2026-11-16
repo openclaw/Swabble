@@ -1,5 +1,7 @@
 # Changelog
 
+## Unreleased
+
 ## 0.1.2 - 2026-11-15
 
 **Highlights:** Keeps launchd services working across bare or relative invocations and upgrades while preserving macOS 26 compatibility.
