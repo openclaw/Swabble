@@ -1,14 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 - 2026-11-15
 
-- Pin CI and local lint tooling to checksum-verified SwiftFormat 0.63.1 and SwiftLint 0.65.1 so upstream rule changes cannot break unchanged code.
-
-- Build and verify CI and release artifacts with Xcode 27 on macOS 27, retaining the macOS 26 minimum and verifying the x86_64 release under Rosetta.
-
-- Use the shared Swift CLI release workflow for macOS-only signed releases and no-publish rehearsals, replacing the duplicated release pipeline.
+**Highlights:** Keeps launchd services working across bare or relative invocations and upgrades while preserving macOS 26 compatibility.
 
 - Stored an absolute executable path in the launchd agent for bare and relative invocations while preserving stable symlinks across upgrades. (#15, thanks @SebTardif)
+- Pin CI and local lint tooling to checksum-verified SwiftFormat 0.63.1 and SwiftLint 0.65.1 so upstream rule changes cannot break unchanged code.
+- Build and verify CI and release artifacts with Xcode 27 on macOS 27, retaining the macOS 26 minimum and verifying the x86_64 release under Rosetta.
+- Use the shared Swift CLI release workflow for macOS-only signed releases and no-publish rehearsals, replacing the duplicated release pipeline.
 - Updated the pinned CI formatter to SwiftFormat 0.63.1.
 
 ## 0.1.1 - 2026-10-06

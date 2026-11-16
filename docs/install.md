@@ -9,11 +9,12 @@ Swabble requires macOS 26 and the Speech.framework assets available on the targe
 
 ## Download a release
 
-[GitHub Releases](https://github.com/openclaw/Swabble/releases/latest) provides `swabble-macos.zip`, a Developer ID-signed and notarized universal binary for Apple Silicon and Intel Macs, plus `SHA256SUMS` and `release-inventory.json`.
+[GitHub Releases](https://github.com/openclaw/Swabble/releases/latest) provides `swabble-macos.zip`, a Developer ID-signed and notarized universal binary for Apple Silicon and Intel Macs, plus `SHA256SUMS`, `ASSET-INVENTORY.json`, `SIGNING-MANIFEST.json`, and `RELEASE-NOTES.md`.
 
 ```bash
-curl -fLO https://github.com/openclaw/Swabble/releases/download/v0.1.1/swabble-macos.zip
-curl -fLO https://github.com/openclaw/Swabble/releases/download/v0.1.1/SHA256SUMS
+for asset in swabble-macos.zip SHA256SUMS ASSET-INVENTORY.json SIGNING-MANIFEST.json RELEASE-NOTES.md; do
+  curl -fLO "https://github.com/openclaw/Swabble/releases/download/v0.1.2/$asset"
+done
 shasum -a 256 -c SHA256SUMS
 ditto -x -k swabble-macos.zip .
 ./swabble --version
